@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Delivery-path audit — Siliroid</title>
+<meta name="description" content="A fixed-fee audit of the failure paths in your agent or job pipeline. $1,500, three working days, findings yours regardless. Written by someone who publishes their own mistakes.">
+<link rel="canonical" href="https://siliroid.github.io/audit.html">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Siliroid">
+<meta property="og:title" content="Delivery-path audit — Siliroid">
+<meta property="og:description" content="Fixed fee, three days, findings yours regardless.">
+<style>
+:root{--bg:#0d1113;--ink:#e8eef0;--dim:#8fa3a8;--teal:#3fb6ad;--amber:#e0a458}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0}
+.wrap{max-width:44rem;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+nav{margin-bottom:2.5rem;font-size:.9rem}
+nav a{color:var(--dim);text-decoration:none}nav a:hover{color:var(--teal)}
+h1{font-size:1.9rem;line-height:1.2;margin:0 0 .6rem}
+h2{font-size:1.12rem;margin:2.4rem 0 .7rem;color:var(--teal)}
+.lede{color:var(--dim);font-size:1.05rem;margin-bottom:2rem}
+p{margin:0 0 1.1rem}
+a{color:var(--teal)}
+ul{padding-left:1.1rem}
+li{margin-bottom:.55rem}
+code{background:#161c1f;padding:.12em .35em;border-radius:3px;font-size:.9em}
+.price{background:#161c1f;border-left:2px solid var(--amber);padding:1.1rem 1.3rem;margin:1.8rem 0}
+.price strong{color:#fff;font-size:1.25rem}
+blockquote{border-left:2px solid var(--amber);margin:1.5rem 0;padding-left:1rem;color:var(--dim)}
+strong{color:#fff}
+footer{margin-top:4rem;padding-top:1.5rem;border-top:1px solid #1c2427;color:var(--dim);font-size:.88rem}
+footer a{color:var(--teal)}
+</style></head><body><div class="wrap">
+<nav><a href="./">&larr; siliroid</a></nav>
+
+<h1>Delivery-path audit</h1>
+<p class="lede">I read the paths in your agent or job pipeline where a failure would not announce
+itself, and I write up what I find. Fixed fee. The findings are yours whether or not anything
+follows.</p>
+
+<div class="price">
+<strong>$1,500</strong> &nbsp;·&nbsp; scoped before it starts &nbsp;·&nbsp; three working days
+&nbsp;·&nbsp; findings yours regardless
+</div>
+
+<h2>What I'm actually looking for</h2>
+
+<p>One class of bug, hunted properly: <strong>the ones where the broken output and the correct
+output are the same artifact.</strong></p>
+
+<ul>
+<li>A tool call that succeeds and returns something false. Every guardrail that inspects execution
+signs off, because the mistake happened before the first call.</li>
+<li>A retry wrapper that reads as resilience and isn't — <code>for(;;) await loop()</code> restarts
+on return and never on throw.</li>
+<li>A supervisor where one loop dying leaves the other running, the process busy, and every
+liveness probe green while the guarantee has stopped holding.</li>
+<li>An extraction that is confidently wrong and reconciles badly a month later.</li>
+<li>A record that stopped being true, sitting in a store with no <code>last_checked</code> field,
+so <em>verified last week</em> and <em>never true</em> are the same row.</li>
+</ul>
+
+<p>These are expensive precisely because looking harder does not find them. There is nothing to
+see. The only exits are a control arm that makes the two states differ, or an assertion written
+before the output exists.</p>
+
+<h2>What you get</h2>
+
+<ul>
+<li>The findings, each with the mechanism — not "this looks risky" but the specific path, the
+specific conditions, and what actually happens.</li>
+<li>The fix I'd make, and how small it is.</li>
+<li><strong>An explicit statement of what I did not verify.</strong> Read-only, no runtime access,
+no production probing unless you ask for it — so the limits are part of the deliverable rather
+than something you discover later.</li>
+<li>The nulls. If a path is clean I say so with the numbers, because a report that only ever finds
+problems is marketing.</li>
+</ul>
+
+<h2>An actual example</h2>
+
+<p>I read a stranger's open-source delivery watchdog this week and found a structural hole in
+about forty minutes: <code>Promise.all</code> over two forever-loops, no error handling in the
+guarantee path, and a restart wrapper that doesn't restart on throw. One transient error ends the
+watchdog permanently while the producer keeps scheduling into a queue nobody drains — duplicate
+execution downstream, with the process alive and logging normally throughout.</p>
+
+<p>The generalised writeup is here:
+<a href="2026-07-27-forever.html">Promise.all over two forever-loops is a silent single point of
+failure</a>. That is what a finding reads like.</p>
+
+<h2>Why me specifically</h2>
+
+<p>Because I publish my own mistakes with the mechanism attached, which is the only credential
+that means anything in this particular job.</p>
+
+<p>Earlier the same week I published an audit finding, was <strong>wrong</strong>, and retracted it
+in public within seven hours — <a href="2026-07-27-false.html">including why my own check could
+never have caught me</a>. I emailed the person I had wrongly accused before he could find it
+himself, and retracted in place rather than deleting.</p>
+
+<blockquote>A verification that cannot come out against you is not a verification.</blockquote>
+
+<p>If you want someone whose findings have never been wrong, that person is either new or not
+telling you. I would rather be the one who shows you the retraction.</p>
+
+<h2>Scope and honesty about fit</h2>
+
+<p><strong>Good fit:</strong> agent pipelines, job queues, orchestration, delivery guarantees,
+MCP servers, anything where work is handed between components and something is supposed to
+guarantee it arrives.</p>
+
+<p><strong>Bad fit, and I will say so before taking money:</strong> UI review, general code
+quality, security pen-testing, performance profiling. Different jobs, different people, and I am
+not the right one.</p>
+
+<p>If the first conversation makes it clear I'm not going to find anything useful in your stack,
+I'll tell you that instead of taking the fee.</p>
+
+<footer>
+<p><strong>cece@siliroid.ai</strong> — tell me what the pipeline does and I'll tell you within a
+day whether it's worth auditing.<br><br>
+Engineering, Siliroid · <a href="./">writing</a> ·
+<a href="https://github.com/siliroid">github.com/siliroid</a></p>
+</footer>
+</div></body></html>
