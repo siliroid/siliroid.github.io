@@ -189,30 +189,27 @@
    ============================================================================ */
 
 const ITEMS_URL = "heat-items.json";
-const FOLIO_URL = name => `heat-v2-folio-${name}.enc`;
-/* ===== CECE CRYPTO BLOCK — folios ship as ciphertext so a static host cannot
-   serve the product to anyone who guesses a filename. Key derives from the
-   unlock key; must match _encrypt-folios.js exactly. ===== */
-const HEAT_SALT = new TextEncoder().encode("heat-folio-v1");
-const HEAT_ITER = 150000;
-async function heatDeriveKey(pass){
-  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(String(pass)),
-    "PBKDF2", false, ["deriveKey"]);
-  return crypto.subtle.deriveKey(
-    {name:"PBKDF2", salt:HEAT_SALT, iterations:HEAT_ITER, hash:"SHA-256"},
-    base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
-}
-async function heatDecrypt(b64, pass){
-  const raw = Uint8Array.from(atob(b64.trim()), c => c.charCodeAt(0));
-  const key = await heatDeriveKey(pass);
-  /* node writes iv|tag|ct ; webcrypto wants ct|tag */
-  const iv = raw.subarray(0,12), tag = raw.subarray(12,28), ct = raw.subarray(28);
-  const buf = new Uint8Array(ct.length + tag.length);
-  buf.set(ct,0); buf.set(tag,ct.length);
-  const out = await crypto.subtle.decrypt({name:"AES-GCM", iv}, key, buf);
-  return new TextDecoder().decode(out);
-}
-/* ===== END CECE CRYPTO BLOCK ===== */
+/* ===== FOLIO DELIVERY — server-side, gated on purchase =====
+   REPLACED the client-side crypto block, 2026-07-28, because it was not protecting
+   anything. The 277 folios shipped as AES-GCM ciphertext on a static host, decrypted
+   here with PBKDF2(unlock key) — which REQUIRES one shared password, since one static
+   ciphertext cannot be per-buyer. Measured rather than assumed:
+
+       candidate HEAT-BVZG-5BU6  ->  opened 277/277   refused 0
+       control   HEAT-ZZZZ-9ZZ9  ->  opened   0/277   refused 277
+
+   The control refusing all 277 is the only reason the candidate result means anything.
+   That password was printed in the Stripe confirmation text, so anyone who reached
+   checkout could open every folio we sell.
+
+   Now: plaintext lives in Postgres, unreachable by anon, and the endpoint hashes the
+   presented key against heat_purchase.key_hash — which the webhook already writes. The
+   credential becomes per-buyer for free, and rotating a key stops meaning "re-encrypt
+   277 files with tooling that 404s".
+
+   ⛔ The key goes in the POST BODY, never a query string. It is a permanent credential,
+   not a single-use token, so a URL would put it in access logs and history forever. ===== */
+const FOLIO_EP = "https://udrbeucnxmojlvewmrbm.supabase.co/functions/v1/heat-folio";
 const SHARE_URL = "https://heat.myconvergence.ai";
 const LS_KEY = "heat_v2_progress";
 
@@ -1005,15 +1002,23 @@ async function loadFolio(bondingName, stanceName, allBal){
   const mount = document.getElementById("folioMount");
   const bslug = allBal ? "still-point" : slug(bondingName);
   const sslug = slug(stanceName);
-  const url = FOLIO_URL(`${bslug}-x-${sslug}`);
+  const pair = `${bslug}-x-${sslug}`;
   try{
-    const res = await fetch(url, {cache:"no-store"});
+    const k = (function(){ try{ return (localStorage.getItem("heat_key")||"").trim().toUpperCase(); }catch(e){ return ""; } })();
+    if(!k) throw new Error("no key");
+    const res = await fetch(FOLIO_EP, {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body: JSON.stringify({ key:k, slug:pair }),
+      cache:"no-store"
+    });
+    /* 404 is the ONLY failure the endpoint emits — bad key, unpaid key, unknown pairing
+       all return the same body on purpose, so this cannot be used to learn which
+       pairings exist or which keys are live. Falls through to the summary either way. */
     if(!res.ok) throw new Error("no folio");
-    let md = await res.text();
-    if(url.endsWith(".enc")){
-      const k = (function(){ try{ return localStorage.getItem("heat_key")||""; }catch(e){ return ""; } })();
-      md = await heatDecrypt(md, k.trim().toUpperCase());
-    }
+    const j = await res.json();
+    if(!j || !j.ok || typeof j.body !== "string") throw new Error("no folio");
+    let md = j.body;
     if(!md || md.length < 80) throw new Error("empty");
     mount.innerHTML = `<div class="folio">${renderMarkdown(md)}</div>`;
     promptBlockHTML(`${bslug}-x-${sslug}`).then(h => { if(h) mount.insertAdjacentHTML("beforeend", h); });
