@@ -765,6 +765,20 @@ function result(){
    the product exists; nothing else needs to change. */
 const HEAT_PRICE = "$29";
 const HEAT_BUY_URL = "";              /* set to the Gumroad/Stripe link */
+// DO NOT MERGE THIS UNTIL CHECKOUT WRITES A PURCHASE ROW.
+//
+// This gate refuses forged keys correctly and verifiably. It also refuses REAL BUYERS,
+// because nothing calls heat_record_purchase() yet. The buy buttons on quiz.html and
+// stance.html are raw Stripe PAYMENT LINKS - no session, no webhook, no row written.
+//
+// Shipping this alone converts "there is no paywall" into "the paywall rejects
+// everyone", which is strictly worse than the bug it fixes: today a buyer at least
+// gets in. I built the half that says no and not the half that says yes, and the
+// half I built is the one that looks finished. That asymmetry is the whole hazard.
+//
+// WHAT CLOSES IT: a Stripe webhook calling heat_record_purchase(key, session, tier).
+// One Supabase Edge Function. Blocked on Stripe API access, which is not mine.
+
 // ---- THE GATE IS A RECORD NOW, NOT A CHECKSUM ---------------------------------
 // Was: sum=(sum*31+charCode)%1296, compared against the last two characters of the key.
 // That is SELF-CHECKING — it needs no server and no purchase — so 2,176,782,336 valid
