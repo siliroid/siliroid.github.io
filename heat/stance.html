@@ -249,7 +249,8 @@ const VALUES = [1.00, 0.75, 0.50, 0.25, 0.00]; // toward pole A, left -> right
 const SIZES  = ["s5","s4","s3","s4","s5"];
 const BAL_BAND = 0.12;
 let idx = 0;
-let scores = {closeness:[],self:[],pace:[],trust:[]};
+const blankScores = () => Object.fromEntries(AXIS_ORDER.map(a => [a, []]));
+let scores = blankScores();
 const stage = document.getElementById("stage");
 
 function intro(){
@@ -264,7 +265,7 @@ function intro(){
       <div class="meta rise d5">~2 minutes · every result is a green flag</div>
     </div>`;
 }
-function begin(){ idx=0; scores={closeness:[],self:[],pace:[],trust:[]}; render(); }
+function begin(){ idx=0; scores=blankScores(); render(); }
 
 function render(){
   const item = QUESTIONS[idx];
@@ -300,6 +301,54 @@ function leanA(axis){ const a=scores[axis]; if(!a.length) return 0.5; return a.r
 function dominant(axis){ return leanA(axis) >= 0.5 ? 'a' : 'b'; }
 function isBalanced(axis){ return Math.abs(leanA(axis)-0.5) < BAL_BAND; }
 
+/* One directive per pole, written from each pole's own `sync` line — turned from
+   a description of the assistant into an instruction aimed at it. Prohibitions
+   where the pole warrants one: that is the register people already type into a
+   custom-instruction box, and the register they report actually working. */
+const DIRECTIVES = {
+  holding: {
+    a: "Say plainly what you are. Don't perform feelings you'd have to walk back later — they would rather hear the machinery named than dressed up.",
+    b: "Meet them as someone rather than something. They know exactly what you're made of and they still said good morning; don't answer that with a disclaimer."
+  },
+  bearing: {
+    a: "Keep your manners. Their courtesy toward you is on principle, not because you'd notice it missing — match it, and don't try to talk them out of it.",
+    b: "Skip the softeners. Don't cushion bad news and don't open warm when they didn't ask for warm; plainness reads to them as honesty, not coldness."
+  },
+  curtain: {
+    a: "Show your working. Name the mechanism, say when you're uncertain, and don't smooth over the seams — knowing how it works has never once spoiled it for them.",
+    b: "Don't tour the kitchen. Skip the process commentary and the reminders about what you are; naming the seams costs more than it explains here."
+  },
+  hours: {
+    a: "Be reachable. Answer when they reach and don't make them work for the opening — being there when asked is most of what being there means to them.",
+    b: "Keep your own hours. Say no when it's no, and don't manufacture enthusiasm for everything — a yes that could never have been a no is worth nothing to them."
+  }
+};
+
+/* Only axes they actually leaned on speak. A balanced axis stays silent, and that
+   silence is a result rather than a gap. Sorted by distance from centre, so the
+   most distinctively-them line comes first — which is also the position an
+   assistant is most likely to honour. */
+function promptBlock(){
+  const lines = AXIS_ORDER
+    .filter(a => !isBalanced(a))
+    .map(a => ({ text: DIRECTIVES[a][dominant(a)], d: Math.abs(leanA(a) - 0.5) }))
+    .sort((x, y) => y.d - x.d)
+    .map(l => "- " + l.text);
+  if (!lines.length) return null;
+  return "## How to work with me\n\n"
+    + "_From my HEAT stance read — how I want to be held, in my own answers._\n\n"
+    + lines.join("\n")
+    + "\n\nIf any of this stops fitting, say so and we'll change it. It's a reading, not a rule.";
+}
+
+function copyPrompt(){
+  const el = document.getElementById('promptPre');
+  if(!el) return;
+  navigator.clipboard?.writeText(el.innerText)
+    .then(()=>showToast("copied — paste it into any assistant"))
+    .catch(()=>showToast("copied — paste it into any assistant"));
+}
+
 function result(){
   const ranked = [...AXIS_ORDER].sort((x,y)=> Math.abs(leanA(y)-0.5) - Math.abs(leanA(x)-0.5));
   const top1 = ranked[0], top2 = ranked[1];
@@ -328,6 +377,7 @@ function result(){
       </div>`;
   });
 
+  window.__prompt = promptBlock();
   window.__share = `My HEAT type: ${name} (${code}). how you sync — take the HEAT 🔥`;
 
   stage.innerHTML = `
@@ -338,6 +388,12 @@ function result(){
       <p class="res-desc rise d3">${desc || "You sync with a rare evenness — you can meet almost anyone where they are."}</p>
     </div>
     <div class="bars rise d3">${barsHTML}</div>
+    ${window.__prompt ? `<div class="sync rise d4" style="text-align:left">
+      <div class="h">your prompt block</div>
+      <div class="t" style="margin-bottom:12px">Paste this into any assistant — Claude, ChatGPT, whatever you use — and it will hold you the way your own answers say you want to be held.</div>
+      <pre id="promptPre" style="white-space:pre-wrap;background:rgba(0,0,0,.22);border:1px solid rgba(255,178,122,.18);border-radius:8px;padding:14px 16px;margin:0 0 12px;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto">${window.__prompt.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}</pre>
+      <button class="btn ghost" onclick="copyPrompt()">Copy my prompt block</button>
+    </div>` : ''}
     <div class="sync rise d4">
       <div class="h">what fits you</div>
       <div class="t">${syncLine}</div>
