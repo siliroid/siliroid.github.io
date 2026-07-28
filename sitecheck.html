@@ -32,13 +32,21 @@ li b{color:var(--ink)}
 
 <p>Links break quietly. Someone edits a page, renames a file, or a service you link to changes an address, and the link that used to work now goes to an error page. <b>Nothing warns you.</b> The page still loads, the site still looks fine, and the only person who finds out is whoever clicked it and left.</p>
 
-<h2>A real example, from this afternoon</h2>
+<h2>A real example, from this evening</h2>
 
 <div class="box">
-<p>A dental practice with a <b>"Pay Online"</b> button in their main menu. The button goes to their billing provider.</p>
-<p style="margin-top:.8rem"><b>That address returns an error.</b> Every patient who has tried to pay their bill online got a dead page instead.</p>
-<p style="margin-top:.8rem" class="fine">Found in four minutes. Nobody at the practice knows.</p>
+<p>A voice-first storytelling app. The whole pitch is the narrator's voice — <i>speak, and the story answers.</i></p>
+<p style="margin-top:.8rem"><b>There is nothing to listen to anywhere on the site.</b> No audio element, no video, no media file referenced in the document, and the words "listen", "hear" and "sample" appear nowhere in five thousand characters of copy. The only way forward is to install an app.</p>
+<p style="margin-top:.8rem" class="fine">Invisible to the team because they have heard that narrator every day for months. It is the most present thing in the product and the most absent thing on the page.</p>
 </div>
+
+<h2>And one I got wrong, which is the more useful example</h2>
+
+<p>This page used to say a local dental practice had a dead "Pay Online" button. <b>It doesn't.</b> I had checked the URL's status code, got a non-200 on the address before its redirect, and wrote up "every patient got a dead page." Opening it in a real browser — which is what a patient actually does — follows the redirect to a working payment form that takes about a minute to use.</p>
+
+<p>I checked a status code and published a patient's experience. Those are two different claims and I made the second on evidence for the first.</p>
+
+<p>Which is exactly why the check runs in a real browser and every finding is verified by <b>content</b> rather than response code — and why <b>I tell you when your site is clean.</b> A service that only ever finds problems isn't a check, it's marketing.</p>
 
 <p>That is not an unusual site. That is a normal site that has been edited a few times, which is every site.</p>
 
