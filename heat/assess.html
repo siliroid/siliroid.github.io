@@ -765,26 +765,58 @@ function result(){
    the product exists; nothing else needs to change. */
 const HEAT_PRICE = "$29";
 const HEAT_BUY_URL = "";              /* set to the Gumroad/Stripe link */
-function validateKey(k){
-  k=(k||"").trim().toUpperCase().replace(/\s+/g,"");
-  const m=/^HEAT-([A-Z0-9]{4})-([A-Z0-9]{4})$/.exec(k);
-  if(!m) return false;
-  const body=m[1]+m[2];
-  let sum=0; for(let i=0;i<6;i++) sum=(sum*31+body.charCodeAt(i))%1296;
-  const chk=sum.toString(36).toUpperCase().padStart(2,"0");
-  return chk===body.slice(6,8);
+// ---- THE GATE IS A RECORD NOW, NOT A CHECKSUM ---------------------------------
+// Was: sum=(sum*31+charCode)%1296, compared against the last two characters of the key.
+// That is SELF-CHECKING — it needs no server and no purchase — so 2,176,782,336 valid
+// keys exist and anyone mints one offline in four lines. Measured: 2000/2000 accepted.
+//
+// Now: a lookup against heat_purchase. A key works because it was SOLD, not because it
+// adds up. The RPC returns a bare boolean — no row, no tier, no date — so a forger
+// minting candidates gets false every time and learns nothing about how to guess better.
+// There is no structure to find, because the answer is a record rather than arithmetic.
+//
+// The publishable key below is PUBLIC BY DESIGN, and is safe to ship only because the
+// grants were locked down first: anon reaches exactly two RPCs and no table at all.
+// Shipping it before that lockdown would have handed every reader TRUNCATE on the
+// money table — Supabase grants that to anon by default and RLS does not cover it.
+const HEAT_API = "https://udrbeucnxmojlvewmrbm.supabase.co";
+const HEAT_PUB = "sb_publishable_hvi8PrEyikJO2lBb4vBWAg_OM6k5QQv";
+
+// Cache only the POSITIVE. A cached "no" would lock out someone who just bought.
+let _heatOk = false;
+async function heatKeyIssued(k){
+  k = (k || "").trim().toUpperCase().replace(/\s+/g, "");
+  if (!k) return { ok:false, reason:"empty" };
+  try {
+    const r = await fetch(HEAT_API + "/rest/v1/rpc/heat_key_issued", {
+      method: "POST",
+      headers: { "apikey": HEAT_PUB, "Authorization": "Bearer " + HEAT_PUB, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_key: k })
+    });
+    if (!r.ok) return { ok:false, reason:"unreachable" };
+    return { ok: (await r.json()) === true, reason:"checked" };
+  } catch (e) { return { ok:false, reason:"unreachable" }; }
 }
-function hasPaidAccess(){
-  try{ return validateKey(localStorage.getItem("heat_key")||""); }catch(e){ return false; }
+async function hasPaidAccess(){
+  if (_heatOk) return true;
+  let k = ""; try { k = localStorage.getItem("heat_key") || ""; } catch(e) {}
+  const res = await heatKeyIssued(k);
+  _heatOk = res.ok;
+  return res.ok;
 }
-function submitKey(){
-  const el=document.getElementById("heatKeyIn");
-  const msg=document.getElementById("heatKeyMsg");
-  if(validateKey(el.value)){
-    try{ localStorage.setItem("heat_key", el.value.trim().toUpperCase()); }catch(e){}
+async function submitKey(){
+  const el = document.getElementById("heatKeyIn");
+  const msg = document.getElementById("heatKeyMsg");
+  msg.textContent = "Checking…";
+  const res = await heatKeyIssued(el.value);
+  if (res.ok) {
+    try { localStorage.setItem("heat_key", el.value.trim().toUpperCase()); } catch(e) {}
+    _heatOk = true;
     revealFolio();
+  } else if (res.reason === "unreachable") {
+    msg.textContent = "We could not reach the server just now — your key may well be fine. Try again in a moment.";
   } else {
-    msg.textContent="That key didn't check out — have another look at it.";
+    msg.textContent = "That key did not check out — have another look at it.";
   }
 }
 function showBuyPanel(){
@@ -879,8 +911,8 @@ function copyPromptBlock(){
 /* ===== END CECE PROMPT-BLOCK ===== */
 
 
-function revealFolio(){
-  if(!hasPaidAccess()) return showBuyPanel();
+async function revealFolio(){
+  if(!(await hasPaidAccess())) return showBuyPanel();
   const cta=document.querySelector(".profile-cta");
   if(cta) cta.style.display="none";
   loadFolio(LAST.bondingName, LAST.stanceName, LAST.allSyncBal);
