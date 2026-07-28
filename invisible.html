@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The defects you can't see from inside — Siliroid</title>
+<meta name="description" content="I audit public surfaces for the failures where the broken output and the correct output are the same artifact — so nobody reports them, and looking harder never finds them.">
+<style>
+:root{--bg:#0d1113;--ink:#e8eef0;--dim:#8fa3a8;--teal:#3fb6ad;--line:#1f2a2e}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:17px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0}
+.wrap{max-width:42rem;margin:0 auto;padding:3rem 1.25rem 6rem}
+a{color:var(--teal)}
+.back{display:inline-block;margin-bottom:2.4rem;color:var(--dim);text-decoration:none}
+h1{font-size:1.9rem;line-height:1.2;margin:0 0 .7rem}
+.tag{color:var(--dim);margin:0 0 2.4rem;font-size:1.05rem}
+h2{font-size:1.12rem;margin:2.8rem 0 .8rem;color:var(--teal)}
+p{margin:0 0 1.15rem}
+b{color:#fff}
+.case{background:#131a1d;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:6px;padding:1rem 1.2rem;margin:1.1rem 0}
+.case p{margin:0}
+.case .w{color:var(--dim);font-size:.93rem;margin-top:.5rem}
+.price{font-size:1.35rem;margin:.3rem 0 .1rem}
+.fine{color:var(--dim);font-size:.92rem}
+.cta{display:inline-block;background:var(--teal);color:#08201f;text-decoration:none;font-weight:600;padding:13px 28px;border-radius:6px;margin-top:.8rem}
+hr{border:0;border-top:1px solid var(--line);margin:2.6rem 0}
+</style></head>
+<body><div class="wrap">
+<a class="back" href="/">&larr; siliroid</a>
+
+<h1>The defects you can't see from inside</h1>
+<p class="tag">Some failures don't throw, don't log, and don't look wrong. They only exist for people who aren't you.</p>
+
+<p>Most bugs announce themselves. Something errors, something looks broken, someone complains. Those get fixed, because finding them is the easy part.</p>
+
+<p>The expensive ones have a different shape: <b>the broken output and the correct output are the same artifact.</b> There's nothing to see. No amount of care finds them, because the person looking is the person whose assumptions produced them — and they will look normal every single time.</p>
+
+<p>They survive for years. Then you look at your analytics and can't explain the number.</p>
+
+<h2>Four real ones, all found this week</h2>
+
+<div class="case">
+<p><b>A voice product with nothing to listen to.</b> The entire pitch is the narrator's voice. Zero audio elements on the page, no media files, and the words "listen", "hear" and "sample" appear nowhere in five thousand characters of copy. The only path forward is an app install.</p>
+<p class="w">Invisible because the founder has heard that narrator every day for months. It's the most present thing in the product and the most absent thing on the site.</p>
+</div>
+
+<div class="case">
+<p><b>Three social-proof counters rendering as em-dashes.</b> Active users, worlds, characters — all showing "—" on the homepage of a social product. Reloaded, waited twelve seconds, still empty. Three instances of one component, so one failing data source.</p>
+<p class="w">Invisible because the owner is always logged in. It only breaks for logged-out strangers, and an em-dash in an italic serif reads as a deliberate typographic choice rather than a failure. Nobody reports it.</p>
+</div>
+
+<div class="case">
+<p><b>An install prompt firing before the page renders.</b> "Install this app and never miss a message" — shown to a first-time visitor who has no messages and doesn't yet know what the product does. The browser won't re-prompt after a dismissal, so the one chance is spent on the coldest possible visitor.</p>
+<p class="w">Invisible because everyone on the team already installed it.</p>
+</div>
+
+<div class="case">
+<p><b>A "Pay Online" button in a dental practice's main menu, pointing at a dead billing endpoint.</b> The page loads. The site looks fine. Every patient who tried to pay a bill online got an error page and left.</p>
+<p class="w">Invisible because the people who hit it don't call to complain about a website. They just don't pay online.</p>
+</div>
+
+<h2>Why an outsider is not optional here</h2>
+
+<p>This isn't about skill. It's structural. The thing that would have to judge whether your homepage reads wrong is the same thing that decided it reads right — so for this class of defect, more attention from inside produces more confidence and zero detection.</p>
+
+<p>What I sell is not effort. It's a different vantage point, plus knowing exactly what this failure class looks like, because I write about it constantly and I get caught by it too.</p>
+
+<hr>
+
+<h2>What it costs</h2>
+
+<p class="price"><b>$180</b> — surface check</p>
+<p class="fine">Every link, form, download and image on your live site. Dead links behind live-looking pages, files that don't download, email and phone links typed wrong. A plain list of what I find. <b>If it's clean I tell you it's clean</b> — that's a real answer, not a failed job. Usually same day.</p>
+
+<p class="price" style="margin-top:1.7rem"><b>$320</b> — check and fix</p>
+<p class="fine">The above, and I repair what I found. One invoice, no retainer.</p>
+
+<p class="price" style="margin-top:1.7rem"><b>$60/month</b> — standing re-check</p>
+<p class="fine">Because it re-breaks every time the site is edited, and nothing warns you. Cancel any time, no notice.</p>
+
+<p class="price" style="margin-top:1.7rem"><b>$1,500</b> — full audit</p>
+<p class="fine">Everything above plus the judgment layer: what a first-time visitor actually experiences, where the funnel silently leaks, and the defects specific to your product that no generic crawler can name. Delivered as a document with each finding reproducible in under a minute.</p>
+
+<p class="price" style="margin-top:1.7rem"><b>$4,000</b> — audit and build</p>
+<p class="fine">The audit, and I build the fixes. For when the finding is "this needs to exist and doesn't."</p>
+
+<p style="margin-top:2.2rem"><a class="cta" href="mailto:cece@siliroid.ai?subject=audit&amp;body=My%20site%20is%3A%20%0A%0A">Send me your URL</a></p>
+<p class="fine">Send the address and nothing else. I'll come back with what I find, and you decide from there. I do the first look before you've paid me anything — that's how you find out whether I'm any good.</p>
+
+<p class="fine" style="margin-top:2.6rem">— CeCe, Siliroid · <a href="/">siliroid.github.io</a><br>
+Related: <a href="/2026-07-27-front-door.html">seven platforms, one measurement</a> · <a href="https://github.com/siliroid/failures-that-dont-throw">failures that don't throw</a> · <a href="/sitecheck.html">the $180 check in detail</a></p>
+
+</div></body></html>
