@@ -764,7 +764,7 @@ function result(){
    One gate, one predicate. Swap validateKey() for a Gumroad license fetch when
    the product exists; nothing else needs to change. */
 const HEAT_PRICE = "$29";
-const HEAT_BUY_URL = "";              /* set to the Gumroad/Stripe link */
+const HEAT_BUY_URL = "https://buy.stripe.com/7sYaEYgef1ng3LgdAY1sQ00";  /* same $29 folio link quiz.html and stance.html already use */
 function validateKey(k){
   k=(k||"").trim().toUpperCase().replace(/\s+/g,"");
   const m=/^HEAT-([A-Z0-9]{4})-([A-Z0-9]{4})$/.exec(k);
