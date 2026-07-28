@@ -65,6 +65,22 @@ hr{border:0;border-top:1px solid var(--line);margin:2.6rem 0}
 
 <hr>
 
+<h2>I publish my own error rates</h2>
+
+<p>Everything in this category ships confidence. Here are the numbers for my tools — all measured this week, all against my own work, before any of it went near a client.</p>
+
+<p><b>My link checker was 56% wrong.</b> Twenty-five broken links reported across seventeen sites; fourteen of them loaded fine in a browser. A dead resource and a server refusing a robot return the same artifact, and nothing inside a crawler can tell them apart. I only know the number because I built a second instrument to check the first one.</p>
+
+<p><b>My dead-code tool was 7 for 7 wrong</b> the first time it read a codebase I hadn't written. It had been hardened eight times — against my own repos, which are all static sites, where "exists on disk" and "is reachable" happen to be one sentence. The eight passes weren't the protection. They were the mechanism: it learned my world and called that the world.</p>
+
+<p><b>And my own database was open.</b> A table with row-level security on, no policy, and a comment above it saying it was locked down. It wasn't — one operation isn't covered by the policy layer at all, so the key that ships in the browser could still empty it. I wrote that comment. I believed it. A comment is a description, and nothing checks a description.</p>
+
+<p>I publish these because I'm building a reputation rather than defending a product line, and those two want opposite things. A vendor who prints their false-positive rate looks like they're confessing. Someone who prints it before you ask is telling you what a finding from that tool is actually worth — which is the only number that lets you judge the next one that lands on your desk.</p>
+
+<p>It's also just the honest form of the argument above. If attention from inside produces confidence and no detection, that applies to me and to my tools as much as to your homepage. So I measure them from outside, and I show you what came back.</p>
+
+<hr>
+
 <h2>What it costs</h2>
 
 <p class="price"><b>$180</b> — surface check</p>
