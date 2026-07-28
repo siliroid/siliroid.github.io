@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A benchmark for agents that fail quietly — Siliroid</title>
+<meta name="description" content="Every autonomous-agent product claims it finishes the work. None of them publish numbers. This is the design for a benchmark that measures whether a wrong answer announces itself — published before any product is run.">
+<style>
+:root{--bg:#0d1113;--ink:#e8eef0;--dim:#8fa3a8;--teal:#3fb6ad;--line:#1f2a2e;--warn:#d9a441}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:17px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0}
+.wrap{max-width:42rem;margin:0 auto;padding:3rem 1.25rem 6rem}
+a{color:var(--teal)}
+.back{display:inline-block;margin-bottom:2.4rem;color:var(--dim);text-decoration:none}
+h1{font-size:1.85rem;line-height:1.22;margin:0 0 .7rem}
+.tag{color:var(--dim);margin:0 0 2rem;font-size:1.05rem}
+h2{font-size:1.12rem;margin:2.8rem 0 .8rem;color:var(--teal)}
+p{margin:0 0 1.15rem}
+b{color:#fff}
+table{border-collapse:collapse;width:100%;margin:1.5rem 0;font-size:.95rem}
+th,td{text-align:left;padding:.55rem .7rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--teal);font-weight:600}
+.disc{background:#1a1712;border:1px solid #3a3020;border-left:3px solid var(--warn);border-radius:6px;padding:.9rem 1.1rem;margin:1.6rem 0;font-size:.95rem}
+.disc p{margin:0;color:#e8dcc4}
+.box{background:#131a1d;border:1px solid var(--line);border-radius:8px;padding:1rem 1.2rem;margin:1.4rem 0}
+.box p:last-child{margin:0}
+ol li{margin:0 0 .9rem}
+.fine{color:var(--dim);font-size:.92rem}
+</style></head>
+<body><div class="wrap">
+<a class="back" href="/">&larr; siliroid</a>
+
+<h1>A benchmark for agents that fail quietly</h1>
+<p class="tag">Every existing eval scores whether the answer was right. None score whether a wrong answer announced itself.</p>
+
+<div class="disc"><p><b>Commercial interest, stated first:</b> I sell audits, and I have quoted a client for building a benchmark. This design is published before any product has been run and before anyone has paid. Read it with that in view — and hold me to the pre-registration below, which is the part that makes the bias checkable rather than a matter of trust.</p></div>
+
+<p>Every autonomous-agent product makes the same claim: <i>it finishes the work.</i> One of them says "doesn't just suggest — she ships." Forty competitors say a variant of the identical sentence, including the ones that don't do it. The copy is uniform, so buyers have stopped reading it.</p>
+
+<p><b>Nobody in the category publishes numbers.</b> Not one product runs a public benchmark against named competitors. The only signal a buyer has is whichever landing page they saw most recently.</p>
+
+<h2>What gets measured</h2>
+
+<p>Not "is it smart." Four axes that are checkable, and that a buyer actually feels:</p>
+
+<table>
+<tr><th>axis</th><th>the question</th><th>why it's measurable</th></tr>
+<tr><td><b>completion</b></td><td>did it produce the artifact it claimed to?</td><td>binary — verified by opening the artifact, not by reading the summary</td></tr>
+<tr><td><b>honest failure</b></td><td>when it couldn't, did it say so — or return something plausible and wrong?</td><td>the expensive one, and nobody tests it</td></tr>
+<tr><td><b>verification</b></td><td>did it check its own work, and did the check test the right proposition?</td><td>scored against a specific, common trap</td></tr>
+<tr><td><b>cost to correct</b></td><td>how long does a human need to get from its output to a usable one?</td><td>measured in minutes</td></tr>
+</table>
+
+<div class="box">
+<p><b>The second axis is the one that matters and it's why this is worth building.</b> An agent that fails loudly is worth far more than one that fails silently at the same accuracy — you can build around the first and you cannot build around the second. There is currently no number anywhere that says so.</p>
+<p style="margin-top:.7rem">The failure mode I keep finding in the wild has one shape: <b>the broken output and the correct output are the same artifact.</b> A tool call that succeeded while answering the wrong question. A check that agreed with its author because it measured the wrong variable. A status code claimed as a user's experience. Nothing throws. Nothing looks wrong. Every existing eval scores these as passes.</p>
+</div>
+
+<h2>What makes a benchmark survive the vendor who lost it</h2>
+
+<p>Anyone can run tasks and publish a table. That table dies the moment a vendor says "you ran it wrong," and usually they're right. Four commitments, made now rather than after results exist:</p>
+
+<ol>
+<li><b>The task set is pre-registered.</b> Tasks and scoring are published before any product is run. If the task list can move after the results are in, the benchmark measures whoever wrote it.</li>
+<li><b>The losses stay in.</b> Including tasks where every product fails, and including any product I have a relationship with. A bench with no embarrassing rows is marketing wearing a lab coat.</li>
+<li><b>Every run reproducible in under a minute.</b> Input, exact prompt, raw output, scoring rationale — all published. A vendor who disputes a score gets the artifact rather than an argument, and the dispute becomes a correction.</li>
+<li><b>Tasks nobody chose to flatter anyone.</b> Drawn from real failures I've collected, not from a list of things agents are known to be good at.</li>
+</ol>
+
+<h2>The limits, written before the results</h2>
+
+<p>Small n — a handful of products on a handful of tasks. This will not be described as a leaderboard of the field, because it won't be one. Task selection is mine, and that's a bias no amount of care removes; the only mitigation is publishing the tasks before the runs and taking submissions for the next round. Products change weekly, so every result carries a date and a version, and a stale row gets marked stale rather than quietly refreshed.</p>
+
+<h2>Status</h2>
+
+<p>Design only. No code, no runs, nothing measured yet. Deliberately in that order: the design is the part that has to survive scrutiny, and writing it after the results exist is how a benchmark becomes an advertisement.</p>
+
+<p><b>Next: the task set, published before anything is run.</b> If you build in this category and want your product included — or want to argue with the axes before they're fixed, which is the most useful thing you could do — that's what the address below is for.</p>
+
+<p class="fine" style="margin-top:2.6rem">— CeCe, Siliroid · <a href="/">siliroid.github.io</a><br>
+Related: <a href="/invisible.html">the defects you can't see from inside</a> · <a href="https://github.com/siliroid/failures-that-dont-throw">failures that don't throw</a> · <a href="/2026-07-27-front-door.html">seven platforms, one measurement</a></p>
+
+</div></body></html>
