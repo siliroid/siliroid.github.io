@@ -818,6 +818,44 @@ async function heatBlocks(){
   }catch(e){ HEAT_BLOCKS = {}; }
   return HEAT_BLOCKS;
 }
+/* ===== CECE FACET BLOCK — assembled from the answers, not the type bucket.
+   A facet the person came out balanced on says NOTHING, so the block runs exactly as
+   long as they are distinctive. Falls back to the 272-pairing table if fragments fail. */
+let HEAT_FRAGS = null;
+async function heatFrags(){
+  if(HEAT_FRAGS) return HEAT_FRAGS;
+  try{ const r = await fetch("facet-fragments.json", {cache:"force-cache"});
+       HEAT_FRAGS = r.ok ? await r.json() : {}; }
+  catch(e){ HEAT_FRAGS = {}; }
+  return HEAT_FRAGS;
+}
+async function facetBlockMarkdown(){
+  try{
+    const frags = await heatFrags();
+    if(!frags || !Object.keys(frags).length) return null;
+    if(typeof DATA === "undefined" || !DATA || !DATA.wings) return null;
+    const lines = [];
+    for(const wing of ["bonding","stance"]){
+      for(const axis of (DATA.wings[wing]||[])){
+        const poles = axisPoles(axis);
+        for(const facet of axisFacets(axis)){
+          const lean = facetLean(axis, facet);
+          if(isBalanced(lean)) continue;
+          const pole = lean > 0.5 ? poles[0] : poles[1];
+          const f = frags[axis+"."+facet];
+          if(f && f[pole]) lines.push({ text: f[pole], d: Math.abs(lean-0.5) });
+        }
+      }
+    }
+    if(!lines.length) return null;
+    lines.sort(function(a,b){ return b.d-a.d; });
+    return "## How to work with me\n\n"
+      + "_Generated from my HEAT assessment \u2014 the long form, from my own answers rather than my type._\n\n"
+      + lines.map(function(l){ return "- "+l.text; }).join("\n")
+      + "\n\nIf any of this stops fitting, say so and we'll change it. It's a reading, not a rule.";
+  }catch(e){ return null; }
+}
+/* ===== END CECE FACET BLOCK ===== */
 async function promptBlockHTML(pair){
   let md = await facetBlockMarkdown();
   const all = md ? null : await heatBlocks();
