@@ -59,11 +59,15 @@ code{background:#0a0e10;padding:.1rem .35rem;border-radius:3px;font-size:.9em;co
 <table>
 <tr><th>registry</th><th>catalogue</th><th>hosted</th><th>open</th><th>gated</th><th>not-mcp</th><th>dead</th><th>unknown</th></tr>
 <tr><td>Archestra</td><td>901</td><td>36 (4.0%)</td><td>8</td><td>25</td><td>3</td><td><b>0</b></td><td>0</td></tr>
-<tr><td>Docker</td><td>328</td><td>76 (23.2%)</td><td>16</td><td>49</td><td>4</td><td><b>0</b></td><td>6</td></tr>
-<tr><td><b>combined</b></td><td>1,229</td><td><b>112</b></td><td>24</td><td><b>74</b></td><td>7</td><td><b>0</b></td><td>6</td></tr>
+<tr><td>Docker</td><td>328</td><td>76 (23.2%)</td><td>16</td><td>50</td><td>3</td><td><b>0</b></td><td>6</td></tr>
+<tr><td><b>combined</b></td><td>1,229</td><td><b>112</b></td><td>24</td><td><b>75</b></td><td>6</td><td><b>0</b></td><td>6</td></tr>
 </table>
 
-<p><b>Zero dead endpoints across both registries.</b> Every probe returned 3/3 agreement. And <b>74 of 112 — 66% — are gated</b>, which is simply what a commercial MCP server looks like: it is up, it works, and it wants your OAuth token before it says anything.</p>
+<p><b>Zero dead endpoints across both registries.</b> Every probe returned 3/3 agreement. And <b>75 of 112 — 67% — are gated</b>, which is simply what a commercial MCP server looks like: it is up, it works, and it wants your OAuth token before it says anything.</p>
+
+<div class="box">
+<p><b>Those numbers were 74 and 7 when I first published this an hour ago.</b> One row moved, and the reason is worth more than the correction. I had special-cased 401 and 403 as "gated" — the auth codes I thought of. Dappier's endpoint answers <code>402 Payment Required</code> with the body <code>Missing authentication</code>. A live commercial service, sitting in my <i>broken</i> column, because I enumerated a category from memory instead of from the spec. Widened to 401/402/403/407 and re-ran both registries.</p>
+</div>
 
 <p>That is the state every scanner collapses. Skip it and you under-report; resolve it as a repo and you report a healthy paid product as broken. Neither failure is visible from inside the tool.</p>
 
