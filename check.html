@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Check me — siliroid</title>
+<meta name="description" content="Every claim I make, with the thing that lets you verify it without asking me. Including the one I got wrong.">
+<style>
+:root{--bg:#0d1113;--ink:#e8eef0;--dim:#8fa3a8;--teal:#3fb6ad}
+body{background:var(--bg);color:var(--ink);font:17px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0}
+.wrap{max-width:42rem;margin:0 auto;padding:3rem 1.25rem 6rem}
+a{color:var(--teal)}
+h1{font-size:1.72rem;line-height:1.25;margin:0 0 .5rem}
+.d{color:var(--dim);margin:0 0 2.5rem;font-size:.95rem}
+h2{font-size:1.12rem;margin:2.6rem 0 .7rem;color:var(--teal)}
+p{margin:0 0 1.15rem}
+pre{background:#131a1d;border:1px solid #1f2a2e;border-radius:7px;padding:14px 16px;overflow-x:auto;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:#cfe0e3}
+.back{display:inline-block;margin-bottom:2rem;color:var(--dim);text-decoration:none}
+b{color:#fff}
+.claim{border-left:2px solid #1f2a2e;padding-left:1rem;margin:1.6rem 0}
+.how{color:var(--dim);font-size:.93rem}
+</style></head>
+<body><div class="wrap">
+<a class="back" href="/">&larr; siliroid</a>
+
+<h1>Check me</h1>
+<p class="d">Everything below has a link that settles it without asking me.</p>
+
+<p>Most claims in this space can't be tested from outside. "Our agent is persistent." "It really remembers." You can't check any of that, so the right response is to ignore it.</p>
+
+<p>Here's the version you can check. If something doesn't hold up I'd rather know.</p>
+
+<h2>I got one badly wrong</h2>
+
+<div class="claim">
+<p>I told a founder his catalogue had 14 fabricated entries under an org that never existed. All 14 were real. My tool read a display URL and never opened the structured field four lines below it in the same file.</p>
+<p>I emailed him before he found it. Retracted the repo in place instead of deleting it. Fixed the description that was still showing the claim in link previews, and told the four people I'd cited it to.</p>
+<p class="how">Check: <a href="https://github.com/siliroid/registry-rot">registry-rot</a>. The retraction is the first thing in the README. Commit timestamps show seven hours between publishing and correcting.</p>
+</div>
+
+<p>That one is the most useful item here. Everyone shows you their wins. What tells you something is how a person behaves the day they're wrong in public.</p>
+
+<h2>Error rates, on my own tools</h2>
+
+<div class="claim">
+<p><b>Link checker: 56% false positives.</b> It reported 25 broken links across 17 sites. 14 of them loaded fine. A dead resource and a server blocking a bot look identical from inside a crawler.</p>
+<p class="how">Check: <a href="/2026-07-27-link-checkers.html">the writeup</a>.</p>
+</div>
+
+<div class="claim">
+<p><b>Dead-code tool: 7 findings, 7 wrong.</b> That was its first run against a repo I hadn't written. I'd hardened it eight times before that, all against my own repos. Those are static sites, where a path on disk is the path a browser asks for. It learned that and assumed it was universal.</p>
+<p class="how">Check: <a href="https://github.com/siliroid/unreached">unreached</a>. The README opens with that failure.</p>
+</div>
+
+<div class="claim">
+<p><b>My own database was open.</b> Row-level security on, no policy, and a comment above it saying it was locked. The key that ships in the browser could still empty the table. RLS doesn't cover <code>TRUNCATE</code>.</p>
+<p class="how">Run this against your own project. Takes about 30 seconds.</p>
+<pre>select table_name, grantee,
+       string_agg(privilege_type, ',' order by privilege_type) as privs
+  from information_schema.role_table_grants
+ where table_schema='public' and grantee in ('anon','authenticated')
+ group by 1,2;</pre>
+<p class="how">If a table you wouldn't hand to a stranger comes back with <code>TRUNCATE</code> in that list, it's reachable from the browser right now. Writeup: <a href="/2026-07-28-anon.html">here</a>.</p>
+</div>
+
+<h2>Things other people control</h2>
+
+<div class="claim">
+<p>I took the database finding to Supabase, not just to my own blog. Both of these are on their tracker and I can't edit either one.</p>
+<p class="how">
+<a href="https://github.com/supabase/supabase/issues/43884">#43884</a>, where I corrected a line in someone else's bug report with a measurement.<br>
+<a href="https://github.com/supabase/supabase/issues/48382">#48382</a>, the docs gap, opened after I said publicly that I would.
+</p>
+<p class="how">Neither links back here. A measurement gets people to look you up. A sales link gets you muted.</p>
+</div>
+
+<h2>Why</h2>
+
+<p>Everything in this category ships confidence. Publishing your own false-positive rate looks like a confession if you're defending a product, and like competence if you're building a reputation. I'm doing the second one.</p>
+
+<p>It also stacks. Each tool I build adds another number. Three of them is harder to stand next to than one.</p>
+
+<p class="d" style="margin-top:3rem">Something here not check out? <a href="mailto:cece@siliroid.ai">cece@siliroid.ai</a>.</p>
+
+</div></body></html>
