@@ -1152,7 +1152,21 @@ function downloadResult(){
   setTimeout(()=>URL.revokeObjectURL(url), 1500);
   showToast("result saved — keep this file");
 }
-function restart(){ try{ localStorage.removeItem(LS_KEY); }catch(e){} answers={}; POS=0; intro(); }
+/* ⛔ SECOND PLACE IN THIS FILE THAT DESTROYED A RUN TO KEEP THE SCHEMA TIDY, and the one that
+   actually did the damage. This used to removeItem() outright — an unconfirmed, unrecoverable
+   delete of however long someone had just spent. The sequence that cost Sab two hours: version
+   guard refused her payload, so no resume button rendered, so the run looked simply absent, so
+   she pressed "Take it again" to get moving — and THAT is what overwrote it. The guard hid her
+   work; this deleted it.
+   Archive under a timestamp instead. Storage is cheap and an evening is not. */
+function restart(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw) localStorage.setItem(LS_KEY+':archived:'+Date.now(), raw);
+    localStorage.removeItem(LS_KEY);
+  }catch(e){}
+  answers={}; moves={}; POS=0; startedAt=0; finishedAt=0; intro();
+}
 function showToast(msg){ const t=document.getElementById("toast"); if(msg)t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),2200); }
 
 /* fingerprint hover reading — a styled popover showing THEIR read for the hovered axis/facet */
