@@ -99,6 +99,10 @@
   .res-epithet{text-align:center;font-family:var(--display);font-style:italic;color:var(--ink-soft);font-size:19px;margin-bottom:8px}
   .res-overlay{text-align:center;font-size:13px;color:var(--ink-soft);margin-bottom:4px}
   .res-overlay b{color:var(--amber);font-style:normal}
+  .movesrow{display:flex;justify-content:center;margin-top:14px}
+  .moveschip{background:transparent;border:1px solid var(--line-hi);color:var(--ink-faint);border-radius:99px;padding:6px 14px;font-size:11.5px;letter-spacing:.06em;cursor:pointer;font-family:inherit;transition:.15s}
+  .moveschip:hover{color:var(--ink)}
+  .moveschip.on{border-color:var(--accent,#3fb6ad);color:var(--accent,#3fb6ad)}
   .res-code{text-align:center;font-size:12px;letter-spacing:.22em;color:var(--ink-faint);font-weight:600;margin-top:8px}
   .res-desc{color:var(--ink-soft);font-size:16.5px;text-align:center;max-width:52ch;margin:24px auto 0}
   .section-h{font-family:var(--display);font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:var(--ember);font-weight:600;text-align:center;margin:50px 0 6px}
@@ -301,6 +305,20 @@ let SEQ = [];             // ordered list of {item, movement} for the four movem
 let POS = 0;              // index into a flat presentation list (items + turn marker)
 let FLOW = [];            // presentation flow: {type:'item'|'turn', ...}
 let answers = {};         // id -> value (toward pole A, 0..1)
+/* id -> true when the person says this one MOVES on them.
+   ⛔ NOT the same as the centre dot and it must never be collapsed into it. Centre means
+   "no strong pull either way". This means "strong pull, both directions, depends on the day."
+   Those are opposite readings of the same dot, and we were about to record the second as the
+   first — which throws the answer away and then reports the average as if it were a trait.
+   Sab found this by taking her own test: "sometimes it just depends how i feel." */
+let moves = {};
+/* Elapsed time is not ops telemetry, it is a VALIDITY SIGNAL, which is why it ships next to
+   `validity` in the payload rather than in a dashboard somewhere. 125 considered items cannot
+   be done in four minutes; a run that fast is noise, and we are about to sell a folio generated
+   off it. Sab, taking her own test: "because i actually have to THINK." That is the tell — the
+   instrument costs real attention, so time spent is evidence the attention was paid. */
+let startedAt = 0;
+let finishedAt = 0;
 let VERSION = "2.1.0";
 let BAND = 0.12, STRONG = 0.28;
 let AUTONEXT = true;            // tap a dot -> jump to next; toggleable, persisted
@@ -350,13 +368,24 @@ function movementItems(m){ return FLOW.filter(f=>f.type==="item" && f.movement==
 /* =========================== persistence =========================== */
 function save(){
   try{
-    localStorage.setItem(LS_KEY, JSON.stringify({v:VERSION, pos:POS, ans:answers, t:Date.now()}));
+    localStorage.setItem(LS_KEY, JSON.stringify({v:VERSION, pos:POS, ans:answers, mov:moves, st:startedAt, fin:finishedAt, t:Date.now()}));
   }catch(e){}
 }
 function loadSaved(){
   try{
     const raw = localStorage.getItem(LS_KEY); if(!raw) return null;
-    const o = JSON.parse(raw); if(o.v !== VERSION) return null; return o;
+    const o = JSON.parse(raw);
+    if(o.v !== VERSION){
+      // ⛔ NEVER silently drop someone's run. This used to `return null`, which meant any
+      // VERSION bump while a person was mid-assessment destroyed all 125 answers with no
+      // warning and no recovery — and the person most likely to bump VERSION is me, while
+      // they are sitting there answering. Scoring across versions genuinely isn't safe, so
+      // we still don't resume — but we keep the answers where they can be recovered by hand
+      // instead of deleting someone's twenty-five minutes to protect a schema.
+      try{ localStorage.setItem(LS_KEY+':orphan:'+o.v, raw); }catch(e){}
+      return null;
+    }
+    return o;
   }catch(e){ return null; }
 }
 
@@ -367,7 +396,12 @@ function encodeResume(){
   const parts = itemFlow().map(f=>{
     const v = answers[f.item.id];
     const lvl = (v===undefined) ? 5 : VALUES.indexOf(v);
-    return f.item.id + ":" + (lvl<0?5:lvl);
+    /* trailing * = "this one moves on me". Deliberately inside the existing token rather
+       than a new pipe segment: an old decoder parseInt()s "2*" to 2, so old readers degrade
+       to the answer instead of choking, and old codes still decode here with moves empty.
+       Without this the flag survived save() but died on any cross-device resume — silently,
+       because a code missing it is indistinguishable from a person who toggled nothing. */
+    return f.item.id + ":" + (lvl<0?5:lvl) + (moves[f.item.id] ? "*" : "");
   }).join(";");
   const raw = `H2|${VERSION}|${POS}|${parts}`;
   try{ return btoa(unescape(encodeURIComponent(raw))); }catch(e){ return raw; }
@@ -381,10 +415,13 @@ function decodeResume(code){
   const ver = seg[1], pos = parseInt(seg[2],10), body = seg.slice(3).join("|");
   if(ver !== VERSION) { alert("That code is from a different version of the assessment."); return false; }
   answers = {};
+  moves = {};
   body.split(";").forEach(tok=>{
     if(!tok) return;
     const [id,lvlS] = tok.split(":"); const lvl = parseInt(lvlS,10);
     if(lvl>=0 && lvl<=4) answers[id] = VALUES[lvl];
+    // trailing * on the level = the person marked this one as shifting on them
+    if(typeof lvlS === "string" && lvlS.indexOf("*") >= 0) moves[id] = true;
   });
   // allow pos === FLOW.length (a completed code) so it lands on the result, not question 1
   POS = (isFinite(pos) && pos>=0 && pos<=FLOW.length) ? pos : 0;
@@ -436,7 +473,8 @@ function applyResume(){
 }
 function resumeLocal(){
   const saved = loadSaved(); if(!saved) return;
-  answers = saved.ans || {}; POS = saved.pos || 0;
+  answers = saved.ans || {}; moves = saved.mov || {}; POS = saved.pos || 0;
+  startedAt = saved.st || 0; finishedAt = saved.fin || 0;
   render();  // render() routes to result() when POS is at/after the end (a completed session)
 }
 function startFresh(){ answers = {}; POS = 0; save(); render(); }
@@ -521,6 +559,7 @@ function renderItem(node){
         <div class="dots">${dotsHTML}</div>
         ${isBreath ? '<div class="ticks" style="justify-content:center"><span>touch center &amp; carry on</span></div>'
                    : '<div class="ticks"><span>most me</span><span>either</span><span>most me</span></div>'}
+        ${isBreath ? '' : `<div class="movesrow"><button class="moveschip ${moves[it.id]?'on':''}" onclick="toggleMoves('${it.id}',this)">this one moves on me</button></div>`}
       </div>
       <div class="navrow">${back}
         <div class="navright">${saveBtn}${toggleBtn}${nextBtn}</div>
@@ -534,7 +573,24 @@ function surfaceAxisName(axis){
   return map[axis] || axis;
 }
 
+/* "this one moves on me" — a SECOND channel, deliberately not a third dot position.
+   It stays independent of the answer: someone can be strongly toward a pole AND say it
+   shifts on them, which is the exact case the five-dot scale cannot express. Toggling it
+   never touches answers[] and never advances, because it is a statement about the answer
+   rather than a replacement for one. */
+function toggleMoves(id, el){
+  if(moves[id]) delete moves[id]; else moves[id] = true;
+  if(el) el.classList.toggle('on', !!moves[id]);
+  save();
+}
+
 function answer(id, v, el){
+  /* Clock starts on the FIRST ANSWER, not on page view. Sab asked for this because the intro
+     claims "about 25 minutes" and nobody has ever measured whether that is true — and a claim
+     on the front page is what people budget against, so if the real number is 40 the intro is
+     quietly costing us completions. Stamping on view instead would fold in everyone who opened
+     it, read the blurb and left, which drags the median toward a number nobody experienced. */
+  if(!startedAt){ startedAt = Date.now(); }
   answers[id] = v;
   save();
   if(AUTONEXT){
@@ -663,6 +719,8 @@ function validity(){
 /* =========================== result =========================== */
 let LAST = null;
 function result(){
+  // stamp once — re-viewing the result page must not overwrite the real completion moment
+  if(!finishedAt) finishedAt = Date.now();
   POS = FLOW.length; save();
   flameShow(false);
 
@@ -746,6 +804,7 @@ function result(){
       <button class="btn ghost" onclick="restart()">Take it again</button>
     </div>
     <div class="codebox" id="shareCodeBox">${fullCode}</div>
+    ${(startedAt && finishedAt) ? `<p class="res-code" style="margin-top:14px">you took ${Math.max(1,Math.round((finishedAt-startedAt)/60000))} minutes${Object.keys(moves).length?` &middot; ${Object.keys(moves).length} marked as shifting`:''}</p>` : ''}
     <div class="footer">a <span>Convergence</span> instrument &middot; the user mirror &middot; it reads you to meet you; it never reads you to keep you</div>`;
 
   window.__share = `My HEAT read: ${bondingName} · ${stanceName} — take the HEAT 🔥 ${SHARE_URL}`;
