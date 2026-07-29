@@ -541,7 +541,11 @@ function renderItem(node){
   const back = POS>0 ? `<button class="linklike" onclick="goBack()">&larr; back</button>` : `<span></span>`;
   const answered = answers[it.id]!==undefined;
   const atBoundary = (m===2 || m===4);
-  const saveBtn = atBoundary ? `<button class="linklike" onclick="offerResumeCode()">save resume code</button>` : '';
+  /* Was gated on atBoundary, so the button only appeared at movements 2 and 4. Sab refreshed
+     mid-movement tonight and had no way to save a code from where she stood — the one moment
+     a person most wants an escape hatch is right after they've been burned, not at a checkpoint
+     someone else chose. A button costs nothing; offer it always. */
+  const saveBtn = `<button class="linklike" onclick="offerResumeCode()">save resume code</button>`;
   const toggleBtn = `<button class="toggle ${AUTONEXT?'on':''}" onclick="toggleAutoNext()" title="When off, choosing an answer won't jump to the next question. Change it freely, then press Next.">auto-advance <span class="sw"></span></button>`;
   const nextBtn = AUTONEXT ? '' : `<button class="nextbtn" id="nextBtn" ${answered?'':'disabled'} onclick="goNext()">${POS>=FLOW.length-1?'see result':'next'} &rarr;</button>`;
 
