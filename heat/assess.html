@@ -655,23 +655,57 @@ const STANCE_AXES = ["holding","bearing","curtain","hours"];
 function axisFacets(axis){ return DATA.axes[axis].facets; }
 function axisPoles(axis){ return DATA.axes[axis].poles; } // [A,B]
 
-/* facet lean = mean of its scored items' values (toward pole A) */
-function facetLean(axis, facet){
-  const vals = DATA.items
+/* ⛔ facetLean USED TO `return 0.5` ON AN EMPTY SET. 0.5 is also a value the person can pick
+   (the centre dot), so "nobody answered this facet" produced the BYTE-IDENTICAL number to
+   "they deliberately chose dead centre on all five items". Four consumers read it and degraded
+   differently — the export wrote it into a file labelled complete/durable/replayable, which
+   made the guess permanent and unrecoverable.
+   ⇒ Three states now, never two: a number / null / callers handle null explicitly. */
+
+/* ONE place decides which items count. If lean and magnitude filtered separately they could
+   disagree about the denominator, which is the same bug one level up. */
+function facetVals(axis, facet){
+  return DATA.items
     .filter(it => it.axis===axis && it.facet===facet && it.poleA!==null && answers[it.id]!==undefined
                   && !(it.tags && it.tags.indexOf('consistency')>=0))   // §5.1: 5 scored items per facet; consistency re-phrases are validity-only, not scored
     .map(it => answers[it.id]);
-  if(!vals.length) return 0.5;
+}
+function facetCount(axis, facet){ return facetVals(axis, facet).length; }
+
+/* facet lean = mean of its scored items' values (toward pole A). null = never measured. */
+function facetLean(axis, facet){
+  const vals = facetVals(axis, facet);
+  if(!vals.length) return null;
   return vals.reduce((a,b)=>a+b,0)/vals.length;
 }
-/* axis lean = unweighted mean of its 3 facet leans */
+
+/* facet magnitude = mean absolute deviation from centre, normalised 0..1. null = never measured.
+   The channel `lean` cannot express: five answers at dead centre and answers split 1,0,1,0,1
+   both average near 0.5, but the first is genuine moderation and the second is somebody pulled
+   hard in both directions. Same mean, opposite person. */
+function facetMagnitude(axis, facet){
+  const vals = facetVals(axis, facet);
+  if(!vals.length) return null;
+  return vals.reduce((a,b)=>a+Math.abs(b-0.5),0)/vals.length/0.5;
+}
+
+/* axis lean = unweighted mean of its MEASURED facet leans. Unmeasured facets abstain rather
+   than voting 0.5 and dragging the axis toward centre. null if nothing was measured. */
 function axisLean(axis){
-  const fs = axisFacets(axis);
-  const leans = fs.map(f=>facetLean(axis,f));
+  const leans = axisFacets(axis).map(f=>facetLean(axis,f)).filter(l=>l!==null);
+  if(!leans.length) return null;
   return leans.reduce((a,b)=>a+b,0)/leans.length;
 }
-function isBalanced(lean){ return Math.abs(lean-0.5) < BAND; }
+function axisMagnitude(axis){
+  const ms = axisFacets(axis).map(f=>facetMagnitude(axis,f)).filter(m=>m!==null);
+  if(!ms.length) return null;
+  return ms.reduce((a,b)=>a+b,0)/ms.length;
+}
+function hasData(v){ return v !== null && v !== undefined && !Number.isNaN(v); }
+
+function isBalanced(lean){ return hasData(lean) && Math.abs(lean-0.5) < BAND; }
 function strength(lean){
+  if(!hasData(lean)) return "unmeasured";
   const d = Math.abs(lean-0.5);
   if(d < BAND) return "balanced";
   if(d >= STRONG) return "strong";
@@ -900,6 +934,10 @@ async function facetBlockMarkdown(){
         const poles = axisPoles(axis);
         for(const facet of axisFacets(axis)){
           const lean = facetLean(axis, facet);
+          /* ⛔ null must be skipped EXPLICITLY. isBalanced(null) is false, so without this an
+             unmeasured facet falls through and `lean > 0.5` evaluates false, printing the
+             pole-B fragment — a confident sentence about somebody from zero answers. */
+          if(!hasData(lean)) continue;
           if(isBalanced(lean)) continue;
           const pole = lean > 0.5 ? poles[0] : poles[1];
           const f = frags[axis+"."+facet];
@@ -989,14 +1027,27 @@ function wingBarsHTML(label, axes){
     let facetHTML = `<div class="facets">`;
     axisFacets(a).forEach(f=>{
       const fl = facetLean(a,f);
+      const fmag = facetMagnitude(a,f);
+      const fnone = !hasData(fl);          // never measured — NOT the same as centred
       const fbal = isBalanced(fl);
-      const fpos = Math.max(3, Math.min(97, (1-fl)*100));
+      /* ⛔ (1-null)*100 is 100, so without the guard an unmeasured facet clamps to 97 and draws
+         at the far RIGHT — a stronger claim than the 0.5 bug it replaced. */
+      const fpos = fnone ? 50 : Math.max(3, Math.min(97, (1-fl)*100));
       const pretty = f.replace(/_/g," ");
       const fpole = (fl>=0.5?A:B);
       const rep = (DATA.items||[]).find(it=>it.axis===a && it.facet===f && it.poleA && it.poleB);
       const fgloss = rep ? (fl>=0.5?rep.poleA:rep.poleB) : "";
-      const fPopTitle = `${pretty} — ${fbal?"balanced":fpole}`;
-      const fPopBody = fbal ? "You sit right in the middle on this one — it pulls both ways." : (fgloss ? `You lean ${fpole}: ${fgloss}` : `You lean ${fpole}.`);
+      const fPopTitle = fnone ? `${pretty} — not measured` : `${pretty} — ${fbal?"balanced":fpole}`;
+      /* magnitude tells these apart: a deliberate centre on every item (low spread) versus
+         answers pulled hard to both ends that happen to average out (high spread). Same mean,
+         opposite person, and the old copy asserted the second reading for both. */
+      const fPopBody = fnone
+        ? "You didn't answer anything in this one, so there's nothing to report. It isn't a result — it's a gap."
+        : fbal
+          ? (hasData(fmag) && fmag >= 0.5
+              ? "You went to both extremes here rather than sitting still — it averages out, but nothing about it is mild."
+              : "You sat near the middle on these, deliberately and consistently.")
+          : (fgloss ? `You lean ${fpole}: ${fgloss}` : `You lean ${fpole}.`);
       facetHTML += `<div class="facet-row" data-pop-title="${q(fPopTitle)}" data-pop-body="${q(fPopBody)}">
         <div class="facet-name">${pretty}</div>
         <div class="facet-track"><div class="facet-mid"></div><div class="facet-dot ${fbal?'bal':''}" style="left:${fpos}%"></div></div>
@@ -1131,10 +1182,22 @@ function copyShare(){ const t=window.__share||"HEAT 🔥"; navigator.clipboard?.
 function copyResumeFinal(){ const c=encodeResume(); navigator.clipboard?.writeText(c).then(()=>showToast("your answers, as a code")).catch(()=>{}); }
 /* Save a complete, durable, replayable result file (no server needed). Import into heat.json later. */
 function downloadResult(){
-  const axes={}, facets={};
+  /* ⛔ THIS IS THE CONSUMER THAT MADE IT PERMANENT. It used to write facetLean()'s 0.5-on-empty
+     into a file this function's own comment calls "complete, durable, replayable" — so a facet
+     nobody answered was recorded as a measured perfect balance, and no later re-score could
+     recover the difference because the difference was destroyed at write time.
+     ⇒ null, never a substitute number. Plus `coverage` so a reader can tell a short assessment
+     from a complete one, and `magnitude` so ambivalence is distinguishable from moderation. */
+  const round4 = v => (v === null ? null : +v.toFixed(4));
+  const axes={}, facets={}, magnitudes={}, coverage={};
   [...SYNC_AXES,...STANCE_AXES].forEach(a=>{
-    axes[a] = +axisLean(a).toFixed(4);
-    axisFacets(a).forEach(f=>{ facets[a+"."+f] = +facetLean(a,f).toFixed(4); });
+    axes[a] = round4(axisLean(a));
+    axisFacets(a).forEach(f=>{
+      const k = a+"."+f;
+      facets[k]     = round4(facetLean(a,f));
+      magnitudes[k] = round4(facetMagnitude(a,f));
+      coverage[k]   = facetCount(a,f);   // items actually answered behind that number
+    });
   });
   const out = {
     instrument: "HEAT",
