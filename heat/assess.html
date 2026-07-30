@@ -346,6 +346,11 @@ async function boot(){
   try{ const a = localStorage.getItem(AN_KEY); if(a==='0') AUTONEXT=false; else if(a==='1') AUTONEXT=true; }catch(e){}
   buildFlow();
   flameInit(itemFlow().length);
+  /* ⛔ PAY-FIRST GATE — David, 2026-07-30: pay, THEN take it. Moved here from after the run.
+     Placed AFTER the await above on purpose: HEAT_BUY_URL / HEAT_PRICE are `const` declared
+     far below this line, so anything reading them before the fetch yields would hit the TDZ.
+     It would throw loudly rather than silently, but do not move this above the await. */
+  if (!heatGateOpen()) { showGatePanel(); return; }
   intro();
 }
 
@@ -908,6 +913,46 @@ function showBuyPanel(){
   if(m) requestAnimationFrame(()=>m.scrollIntoView({behavior:"smooth",block:"start"}));
 }
 /* ===== END CECE PAYWALL BLOCK ===== */
+/* ===== CECE PAY-FIRST GATE — added 2026-07-30. Remove this block + the call in boot() to revert.
+   The paywall itself was built 2026-07-27 and already works end to end (stripe -> webhook -> key
+   -> success.html handover -> validateKey). This does not build a paywall. It moves the doorway. */
+function heatGateOpen(){
+  if (hasPaidAccess()) return true;
+  /* ⚠ GRANDFATHER anyone already mid-run. Dropping a wall in front of someone with 80 answers
+     saved locks them out of their own work and offers only a destructive control — that exact
+     shape cost Sab two hours on 2026-07-28. A person who started before the gate existed did
+     nothing wrong and must not be the one who pays for the change. */
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) { const o = JSON.parse(raw); if (o && o.ans && Object.keys(o.ans).length) return true; }
+  } catch(e){}
+  return false;
+}
+function showGatePanel(){
+  stage.innerHTML = '<div class="folio" style="text-align:center;max-width:38rem;margin:0 auto">'
+    + '<h2 style="margin-bottom:6px">The full read</h2>'
+    + '<p class="section-sub" style="margin-top:0">125 items, four movements, about twenty-five minutes.</p>'
+    + '<p style="max-width:34rem;margin:18px auto;line-height:1.7">This is the long instrument, not the twelve-question sketch. It asks the same thing several ways on purpose, so what comes out is the shape you actually hold rather than the one you would describe.</p>'
+    + '<p style="font-size:26px;margin:26px 0 4px">' + HEAT_PRICE + '</p>'
+    + '<p class="section-sub" style="margin-top:0">one-time · includes your folio · yours to keep</p>'
+    + (HEAT_BUY_URL ? '<p style="margin:22px 0"><a class="btn" href="'+HEAT_BUY_URL+'">Start the full read</a></p>' : '<p class="section-sub" style="margin:22px 0">(purchase link not set yet)</p>')
+    + '<p class="section-sub" style="margin:26px 0 8px">Want the free twelve first? <a href="quiz.html">Take the short one</a>.</p>'
+    + '<div style="margin-top:26px"><input id="heatKeyIn" placeholder="HEAT-XXXX-XXXX" style="padding:10px 14px;font:inherit;text-align:center;letter-spacing:1px" />'
+    + ' <button class="btn ghost" onclick="submitGateKey()">Unlock</button>'
+    + '<div id="heatKeyMsg" class="section-sub" style="margin-top:10px"></div></div>'
+    + '</div>';
+}
+function submitGateKey(){
+  const el = document.getElementById("heatKeyIn");
+  const msg = document.getElementById("heatKeyMsg");
+  if (validateKey(el.value)) {
+    try { localStorage.setItem("heat_key", el.value.trim().toUpperCase()); } catch(e){}
+    intro();
+  } else {
+    msg.textContent = "That key didn\u2019t check out \u2014 have another look at it.";
+  }
+}
+/* ===== END CECE PAY-FIRST GATE ===== */
 /* ===== CECE PROMPT-BLOCK — free on purpose. It is the shareable proof that the
    read works, so it drives the assessment rather than gating behind it. ===== */
 let HEAT_BLOCKS = null;
