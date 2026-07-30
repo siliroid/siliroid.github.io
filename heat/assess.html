@@ -715,6 +715,7 @@ function strength(lean){
    item on the axis; if perfectly symmetric default to B (§5.2). */
 function dominantPole(axis){
   const lean = axisLean(axis);
+  if(!hasData(lean)) return null;   // never answered is not a pole (§5.2 tie rule below is for REAL ties)
   if(lean > 0.5) return "A";
   if(lean < 0.5) return "B";
   // exact tie: look at the most extreme item value across the axis
@@ -774,19 +775,24 @@ function result(){
   // epithet: adj from strongest sync axis, noun from 2nd; rank by |lean-.5| desc,
   // ties by canonical sync order (§5.4)
   const ranked = [...SYNC_AXES].sort((x,y)=>{
-    const dx=Math.abs(axisLean(x)-0.5), dy=Math.abs(axisLean(y)-0.5);
+    const str = a => { const l = axisLean(a); return hasData(l) ? Math.abs(l-0.5) : -1; };
+    const dx=str(x), dy=str(y);
     if(dy!==dx) return dy-dx;
     return SYNC_AXES.indexOf(x)-SYNC_AXES.indexOf(y);
   });
   // epithet = adj from strongest pole + noun from another; never let it equal a real type name
   const typeNames = new Set(Object.values(BONDING_TYPES).concat([BONDING_STILL_POINT]).map(s=>s.toLowerCase()));
-  const epithetFrom = (i,j)=>`the ${SYNC_POLE_WORDS[ranked[i]][dominantPole(ranked[i])].adj} ${SYNC_POLE_WORDS[ranked[j]][dominantPole(ranked[j])].noun}`;
+  const epithetFrom = (i,j)=>{
+    const pi = dominantPole(ranked[i]), pj = dominantPole(ranked[j]);
+    if(pi===null || pj===null) return null;   // unmeasured axis cannot name anyone
+    return `the ${SYNC_POLE_WORDS[ranked[i]][pi].adj} ${SYNC_POLE_WORDS[ranked[j]][pj].noun}`;
+  };
   let epithet = "the Still Point";
   if(!allSyncBal){
-    epithet = epithetFrom(0,1);
+    epithet = epithetFrom(0,1) || epithet;
     for(const [i,j] of [[0,1],[0,2],[0,3],[1,2],[1,0]]){
       const cand = epithetFrom(i,j);
-      if(!typeNames.has(cand.toLowerCase())){ epithet = cand; break; }
+      if(cand && !typeNames.has(cand.toLowerCase())){ epithet = cand; break; }
     }
   }
 
@@ -794,6 +800,7 @@ function result(){
   function axCode(a){
     const lean = axisLean(a);
     const [A,B] = axisPoles(a);
+    if(!hasData(lean)) return "?"+A.charAt(0)+B.charAt(0);   // never answered — NOT the same as ~balanced
     return isBalanced(lean) ? "~"+A.charAt(0)+B.charAt(0) : (dominantPole(a)==="A"?A:B);
   }
   const syncCode = SYNC_AXES.map(axCode).join(" · ");
@@ -1012,7 +1019,7 @@ function wingBarsHTML(label, axes){
     const [A,B] = axisPoles(a);
     const bal = isBalanced(lean);
     // marker position: lean toward A renders A on the LEFT (matches result-page convention)
-    const posPct = Math.max(4, Math.min(96, (1-lean)*100));
+    const posPct = hasData(lean) ? Math.max(4, Math.min(96, (1-lean)*100)) : 50;   // (1-null)*100 = 100 -> clamped 96 -> far right
     const dom = dominantPole(a);
     const aOn = (!bal && dom==="A") ? "on":"";
     const bOn = (!bal && dom==="B") ? "on":"";
