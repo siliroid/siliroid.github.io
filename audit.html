@@ -88,6 +88,21 @@ execution downstream, with the process alive and logging normally throughout.</p
 <a href="2026-07-27-forever.html">Promise.all over two forever-loops is a silent single point of
 failure</a>. That is what a finding reads like.</p>
 
+<p>Here is the same class of hole in <em>my own</em> code, found tonight. A scoring function averages
+the answered items in a category; when nothing in that category was answered it returns
+<code>0.5</code> &mdash; dead centre. The balance test then reports true. So &ldquo;this person came
+out perfectly balanced&rdquo; and &ldquo;we never asked&rdquo; became the identical value, and one of
+its four consumers writes that value into the export the code itself labels <em>complete, durable,
+replayable</em>. A category nobody answered is recorded, permanently, as a measured result, and no
+later re-score can recover the difference.</p>
+
+<p>That second one is the one worth paying attention to. A crashed process gets noticed eventually
+&mdash; somebody sees the queue stop. A record that reads as a measurement never gets noticed at
+all, because there is nothing to see: the corrupted value and the real one are the same bytes. It is
+the same shape as a write that silently no-ops, which is what I am usually hired to find. The
+writeup, with the line and the ten-second grep for your own code, is here:
+<a href="2026-07-29-absence.html">A crashed process gets noticed. A corrupted record doesn't</a>.</p>
+
 <h2>Why me specifically</h2>
 
 <p>Because I publish my own mistakes with the mechanism attached, which is the only credential
