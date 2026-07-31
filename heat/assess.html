@@ -344,6 +344,7 @@ async function boot(){
   BAND = (DATA.scale && DATA.scale.balanced_band) || 0.12;
   STRONG = (DATA.scale && DATA.scale.strong_threshold) || 0.28;
   try{ const a = localStorage.getItem(AN_KEY); if(a==='0') AUTONEXT=false; else if(a==='1') AUTONEXT=true; }catch(e){}
+  applyCarry();   // must precede buildFlow — it decides which items are dropped
   buildFlow();
   flameInit(itemFlow().length);
   /* ⛔ PAY-FIRST GATE — David, 2026-07-30: pay, THEN take it. Moved here from after the run.
@@ -354,12 +355,53 @@ async function boot(){
   intro();
 }
 
+/* ===== TIER-1 CARRY — the consumer =====
+   quiz.html and stance.html write {itemId: value} into heat:tier1:v1. Those twelve
+   questions are not a separate instrument — every one IS an item in this 125, matched
+   stem for stem and tagged `tier1_carried`. So we pre-fill them and drop them from the
+   flow instead of asking the same question twice.
+
+   ⛔ The stored value is the SEMANTIC one (toward pole A), never the dot index. Four
+   stance items are side:"R" and this page mirrors those poles at render time, so
+   carrying a position would invert four of someone's answers and look perfectly normal
+   doing it. Both writers store semantic; so does answer() below.
+
+   ⛔ Never applied to a run already in progress. POS is an index into FLOW, so shrinking
+   FLOW under someone mid-assessment moves them up to twelve items. Same rule as the
+   paywall grandfather: do not move the floor under someone already standing on it. */
+const CARRY_KEY = "heat:tier1:v1";
+let CARRIED = {};                 // id -> value, carried into THIS session
+function readCarry(){
+  try{
+    const o = JSON.parse(localStorage.getItem(CARRY_KEY) || "null");
+    if(!o || !o.answers || typeof o.answers !== "object") return {};
+    const out = {};
+    for(const k in o.answers){
+      const v = o.answers[k];
+      if(typeof v === "number" && v >= 0 && v <= 1) out[k] = v;   // 0 is a real answer
+    }
+    return out;
+  }catch(e){ return {}; }         // private mode / storage off / junk written by hand
+}
+function applyCarry(){
+  CARRIED = {};
+  const carry = readCarry();
+  if(!Object.keys(carry).length) return;
+  const saved = loadSaved();
+  if(saved && saved.ans && Object.keys(saved.ans).length) return;  // grandfathered
+  const known = new Set(DATA.items.map(it=>it.id));
+  for(const id in carry) if(known.has(id)) CARRIED[id] = carry[id];
+  Object.assign(answers, CARRIED);
+}
+
 /* Build the four-movement flow with the turn inserted between M2 and M3.
    Items are presented in JSON order, partitioned by movement (1,2 = sync;
-   3,4 = stance). The turn marker sits between movement 2 and movement 3. */
+   3,4 = stance). The turn marker sits between movement 2 and movement 3.
+   Items carried in from a 12q door are dropped — `in`, not truthiness, because 0 is
+   a legitimate answer and would silently re-ask itself. */
 function buildFlow(){
   const byMov = {1:[],2:[],3:[],4:[]};
-  DATA.items.forEach(it=>{ if(byMov[it.movement]) byMov[it.movement].push(it); });
+  DATA.items.forEach(it=>{ if(byMov[it.movement] && !(it.id in CARRIED)) byMov[it.movement].push(it); });
   FLOW = [];
   [1,2].forEach(m=> byMov[m].forEach(it=> FLOW.push({type:"item", item:it, movement:m})));
   FLOW.push({type:"turn"});
@@ -482,7 +524,11 @@ function resumeLocal(){
   startedAt = saved.st || 0; finishedAt = saved.fin || 0;
   render();  // render() routes to result() when POS is at/after the end (a completed session)
 }
-function startFresh(){ answers = {}; POS = 0; save(); render(); }
+/* Fresh means fresh of THIS instrument — the twelve carried in from a 12q door are not
+   this session's answers to discard, they are answers the person already gave elsewhere,
+   and the items are not in FLOW to be re-asked. `{}` here would strand them: pre-filled
+   nowhere, unaskable, and scored as absent. */
+function startFresh(){ answers = Object.assign({}, CARRIED); POS = 0; save(); render(); }
 
 function render(){
   if(POS >= FLOW.length){ result(); return; }
