@@ -1,0 +1,4 @@
+# Never commit real environment values. `.env.sample` is the shape; `.env` is the secret.
+.env
+.env.*
+!.env.sample
