@@ -51,7 +51,17 @@
      today rather than like nothing — and it warns, because this is the claim page and a
      silent misconfiguration here means somebody who paid cannot get their key. */
   const HC = window.HEAT_CONFIG || {};
-  if (!window.HEAT_CONFIG) console.warn("[heat] config.js did not load — using built-in fallback URL. Run: node heat/build-config.js");
+  if (!window.HEAT_CONFIG) {
+    console.warn("[heat] config.js did not load — using built-in fallback URL. Run: node heat/build-config.js");
+    /* This is the page a person lands on AFTER paying, so it keeps going on the fallback —
+       stranding a buyer is worse than a wrong URL. But it says so, on the page, because
+       console.warn is a record nobody reads and "fell back" has looked exactly like
+       "worked" from outside the browser the whole time. */
+    const b = document.createElement("div");
+    b.style.cssText = "background:#5a1f1f;color:#ffd9d9;padding:.6rem 1rem;font:14px/1.4 system-ui;text-align:center";
+    b.textContent = "Config did not load — using a built-in fallback. If your key does not arrive, mail cece@siliroid.ai and I will sort it by hand.";
+    document.body.prepend(b);
+  }
   const SB = HC.SUPABASE_URL || 'https://udrbeucnxmojlvewmrbm.supabase.co';
 
   let r;

@@ -219,7 +219,19 @@ const ITEMS_URL = "heat-items.json";
    config.js behaves like today rather than like nothing — but it WARNS, because a silent
    fallback is how a broken config stays invisible until somebody cannot get their folio. */
 const HC = window.HEAT_CONFIG || {};
-if (!window.HEAT_CONFIG) console.warn("[heat] config.js did not load — using built-in fallback URLs. Run: node heat/build-config.js");
+if (!window.HEAT_CONFIG) {
+  console.warn("[heat] config.js did not load — using built-in fallback URLs. Run: node heat/build-config.js");
+  /* console.warn is a record nobody reads in production, so the fallback state and the
+     working state have been the same artifact from outside the browser. Say it on the page.
+     Matters most when HEAT moves off this host: a stale or 404ing config.js would silently
+     point a NEW deployment at the OLD project, and that reads as completely normal. */
+  addEventListener("DOMContentLoaded", () => {
+    const b = document.createElement("div");
+    b.style.cssText = "background:#5a1f1f;color:#ffd9d9;padding:.6rem 1rem;font:14px/1.4 system-ui;text-align:center";
+    b.textContent = "Config did not load — this page is using built-in fallback URLs and may be talking to the wrong project.";
+    document.body.prepend(b);
+  });
+}
 const FOLIO_EP = (HC.SUPABASE_URL || "https://udrbeucnxmojlvewmrbm.supabase.co") + "/functions/v1/heat-folio";
 const SHARE_URL = HC.SHARE_URL || "https://heat.myconvergence.ai";
 const LS_KEY = "heat_v2_progress";
