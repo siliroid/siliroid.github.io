@@ -171,10 +171,32 @@ function render(){
     </div>`;
   requestAnimationFrame(()=>{ document.getElementById("fill").style.width = pct+"%"; });
 }
+/* ===== TIER-1 CARRY =====
+   These twelve questions are not a separate instrument — every one of them IS an item in
+   the 125 (matched stem-for-stem, and all twelve already carry the `tier1_carried` tag in
+   heat-items.json). Same order as QUESTIONS above.
+   ⚠ We store the SEMANTIC value (toward pole A), never the dot index. assess.html renders
+   `side:"R"` items with the poles mirrored, so a position would carry inverted while looking
+   perfectly normal. All twelve of these happen to be side:"L", but the value is what is
+   meaningful and the position is an accident of layout — store the meaning. */
+const CARRY_IDS = ["CL-P1","SB-A1","PA-D1","TR-F1","CL-P2","SB-A2","PA-D2","TR-E1","CL-A1","SB-B1","PA-I1","TR-F2"];
+const CARRY_KEY = "heat:tier1:v1";
+const carried = {};
+
 function answer(v){
   scores[QUESTIONS[idx].axis].push(v);
+  carried[CARRY_IDS[idx]] = v;
   idx++;
-  if(idx >= QUESTIONS.length){ result(); } else { render(); }
+  if(idx >= QUESTIONS.length){ saveCarry(); result(); } else { render(); }
+}
+
+function saveCarry(){
+  try{
+    const prev = JSON.parse(localStorage.getItem(CARRY_KEY) || "{}");
+    const answers = Object.assign({}, prev.answers, carried);   // keep the other wing if it is there
+    const doors = Array.from(new Set([...(prev.doors||[]), "bonding"]));
+    localStorage.setItem(CARRY_KEY, JSON.stringify({ v:1, doors, answers, t:Date.now() }));
+  }catch(e){ /* private mode / storage off — the run still works, it just will not carry */ }
 }
 function leanA(axis){ const a=scores[axis]; if(!a.length) return 0.5; return a.reduce((x,y)=>x+y,0)/a.length; }
 function dominant(axis){ return leanA(axis) >= 0.5 ? 'a' : 'b'; }
@@ -238,7 +260,11 @@ function result(){
         how you hold her, and where those two argue. It isn't finished shipping yet.
         Tell me where to send it and you'll get it the day it is, plus your prompt block so you don't lose it.
       </div>
-      <a class="btn" href="assess.html">Take the full read</a>
+      <div style="color:var(--amber);font-size:13.5px;line-height:1.6;max-width:30rem;margin:0 auto 14px">
+        Your twelve answers are saved. Pick up the assessment where you left off &mdash;
+        <b>these twelve are never asked twice.</b>
+      </div>
+      <a class="btn" href="assess.html">Continue to the assessment</a>
       <div style="margin-top:14px"><a id="convBtn" href="#" style="color:var(--ink-faint);font-size:13px">or tell me when there is more</a></div>
       <div style="color:var(--ink-faint);font-size:12px;margin-top:12px">
         No account. One email, and only about this.

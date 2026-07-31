@@ -292,10 +292,33 @@ function render(){
     </div>`;
   requestAnimationFrame(()=>{ document.getElementById("fill").style.width = pct+"%"; });
 }
+/* ===== TIER-1 CARRY =====
+   These twelve are items in the 125, stem-for-stem, in this order. (The bonding twelve
+   already carry a `tier1_carried` tag in heat-items.json; these were never tagged — same
+   design, half wired.)
+   ⛔ HO-M2, BR-C2, WV-M2 and HR-A3 are `side:"R"`, which means assess.html renders their
+   poles MIRRORED. So we store the SEMANTIC value — toward pole A — and never the dot
+   index: a carried position would invert exactly those four and look perfectly normal
+   doing it. `v` here is already toward-pole-A, and assess stores toward-pole-A too
+   (assess.html ~L535 passes the mapped value, not the position). Checked, not assumed. */
+const CARRY_IDS = ["HO-M1","HO-M2","HO-M3","BR-C1","BR-C2","BR-C3","WV-M1","WV-M2","WV-M3","HR-A1","HR-A2","HR-A3"];
+const CARRY_KEY = "heat:tier1:v1";
+const carried = {};
+
 function answer(v){
   scores[QUESTIONS[idx].axis].push(v);
+  carried[CARRY_IDS[idx]] = v;
   idx++;
-  if(idx >= QUESTIONS.length){ result(); } else { render(); }
+  if(idx >= QUESTIONS.length){ saveCarry(); result(); } else { render(); }
+}
+
+function saveCarry(){
+  try{
+    const prev = JSON.parse(localStorage.getItem(CARRY_KEY) || "{}");
+    const answers = Object.assign({}, prev.answers, carried);   // keep the other wing if it is there
+    const doors = Array.from(new Set([...(prev.doors||[]), "stance"]));
+    localStorage.setItem(CARRY_KEY, JSON.stringify({ v:1, doors, answers, t:Date.now() }));
+  }catch(e){ /* storage off — the run still works, it just will not carry */ }
 }
 function leanA(axis){ const a=scores[axis]; if(!a.length) return 0.5; return a.reduce((x,y)=>x+y,0)/a.length; }
 function dominant(axis){ return leanA(axis) >= 0.5 ? 'a' : 'b'; }
