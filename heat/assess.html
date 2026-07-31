@@ -185,6 +185,7 @@
 <canvas id="flameCv"></canvas>
 <div class="wrap"><div class="stage" id="stage"></div></div>
 <div class="toast" id="toast">copied</div>
+<script src="config.js"></script>
 <script>
 /* ============================================================================
    HEAT — Tier-2 Assessment.  Data-driven from heat-items.json.
@@ -213,8 +214,14 @@ const ITEMS_URL = "heat-items.json";
 
    ⛔ The key goes in the POST BODY, never a query string. It is a permanent credential,
    not a single-use token, so a URL would put it in access logs and history forever. ===== */
-const FOLIO_EP = "https://udrbeucnxmojlvewmrbm.supabase.co/functions/v1/heat-folio";
-const SHARE_URL = "https://heat.myconvergence.ai";
+/* Config now comes from config.js (generated from .env by heat/build-config.js). The
+   fallbacks below are the exact literals that used to be hardcoded here, so a missing
+   config.js behaves like today rather than like nothing — but it WARNS, because a silent
+   fallback is how a broken config stays invisible until somebody cannot get their folio. */
+const HC = window.HEAT_CONFIG || {};
+if (!window.HEAT_CONFIG) console.warn("[heat] config.js did not load — using built-in fallback URLs. Run: node heat/build-config.js");
+const FOLIO_EP = (HC.SUPABASE_URL || "https://udrbeucnxmojlvewmrbm.supabase.co") + "/functions/v1/heat-folio";
+const SHARE_URL = HC.SHARE_URL || "https://heat.myconvergence.ai";
 const LS_KEY = "heat_v2_progress";
 
 /* --- type roster (catalog §, codes -> names). Surface labels only. --- */

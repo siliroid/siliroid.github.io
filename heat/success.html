@@ -30,6 +30,7 @@
   <h1 id="h">Unlocking your folio…</h1>
   <div id="body"></div>
 </main>
+<script src="config.js"></script>
 <script>
 (async () => {
   const h = document.getElementById('h'), body = document.getElementById('body');
@@ -45,9 +46,17 @@
 
   if (!sid) return fail('No checkout session in the link.');
 
+  /* Config comes from config.js (generated from .env by heat/build-config.js). The fallback
+     is the exact literal that used to be inline here, so a missing config.js behaves like
+     today rather than like nothing — and it warns, because this is the claim page and a
+     silent misconfiguration here means somebody who paid cannot get their key. */
+  const HC = window.HEAT_CONFIG || {};
+  if (!window.HEAT_CONFIG) console.warn("[heat] config.js did not load — using built-in fallback URL. Run: node heat/build-config.js");
+  const SB = HC.SUPABASE_URL || 'https://udrbeucnxmojlvewmrbm.supabase.co';
+
   let r;
   try {
-    r = await fetch('https://udrbeucnxmojlvewmrbm.supabase.co/functions/v1/heat-claim?session_id='
+    r = await fetch(SB + '/functions/v1/heat-claim?session_id='
                     + encodeURIComponent(sid), { cache: 'no-store' });
   } catch (e) { return fail('Could not reach the key service.'); }
 
