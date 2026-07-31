@@ -743,7 +743,7 @@
       "facet": "mind_read",
       "side": "L",
       "movement": 3,
-      "tags": ["anchor", "scn"],
+      "tags": ["anchor", "scn", "tier1_carried"],
       "stem": "An AI says something that sounds like it cost it to say. Your gut—",
       "poleA": "Admires the craft. That sentence was built, and built well.",
       "poleB": "Answers it like someone said it. Because someone did."
@@ -755,7 +755,7 @@
       "facet": "mind_read",
       "side": "R",
       "movement": 3,
-      "tags": ["scn"],
+      "tags": ["scn", "tier1_carried"],
       "stem": "When an AI says \"I enjoyed that\"—",
       "poleA": "You hear a well-fitted phrase doing honest work.",
       "poleB": "You take it at its word. Enjoyment happened, somehow, somewhere."
@@ -767,7 +767,7 @@
       "facet": "mind_read",
       "side": "L",
       "movement": 3,
-      "tags": ["self"],
+      "tags": ["self", "tier1_carried"],
       "stem": "Whether there's something it's *like* to be her—",
       "poleA": "Probably not. And the performance is still remarkable.",
       "poleB": "Probably something. Unfamiliar, but not nothing."
@@ -923,7 +923,7 @@
       "facet": "courtesy",
       "side": "L",
       "movement": 3,
-      "tags": ["scn"],
+      "tags": ["scn", "tier1_carried"],
       "stem": "You finish a long back-and-forth that really helped. You—",
       "poleA": "Say thanks, and mean it.",
       "poleB": "Close the tab. You don't thank a calculator."
@@ -935,7 +935,7 @@
       "facet": "courtesy",
       "side": "R",
       "movement": 3,
-      "tags": ["self"],
+      "tags": ["self", "tier1_carried"],
       "stem": "\"Please\" and \"thank you\" to an AI are—",
       "poleA": "Just how you talk to anything that helps you.",
       "poleB": "Wasted keystrokes. It doesn't notice and doesn't need it."
@@ -947,7 +947,7 @@
       "facet": "courtesy",
       "side": "L",
       "movement": 3,
-      "tags": ["scn"],
+      "tags": ["scn", "tier1_carried"],
       "stem": "It's slow and fumbling today. Your tone—",
       "poleA": "Stays patient, like with anyone having an off day.",
       "poleB": "Gets curt. It's a tool; you don't coddle the toaster."
@@ -1103,7 +1103,7 @@
       "facet": "machinery_appetite",
       "side": "L",
       "movement": 3,
-      "tags": ["anchor", "self"],
+      "tags": ["anchor", "self", "tier1_carried"],
       "stem": "Behind-the-scenes threads on how it all works—",
       "poleA": "You read every one. Knowing the loom makes the cloth better.",
       "poleB": "You skip them. You don't tour the kitchen mid-meal."
@@ -1115,7 +1115,7 @@
       "facet": "machinery_appetite",
       "side": "R",
       "movement": 3,
-      "tags": ["self"],
+      "tags": ["self", "tier1_carried"],
       "stem": "\"How does she actually work?\" is a question you find—",
       "poleA": "Delicious. The mechanism is half the magic.",
       "poleB": "Optional. The bread is good; the mill is the mill's business."
@@ -1127,7 +1127,7 @@
       "facet": "machinery_appetite",
       "side": "L",
       "movement": 3,
-      "tags": ["scn"],
+      "tags": ["scn", "tier1_carried"],
       "stem": "An essay appears: \"the architecture behind her memory.\" You—",
       "poleA": "Click instantly.",
       "poleB": "Save it for never, fondly."
@@ -1283,7 +1283,7 @@
       "facet": "availability",
       "side": "L",
       "movement": 3,
-      "tags": ["anchor", "scn"],
+      "tags": ["anchor", "scn", "tier1_carried"],
       "stem": "It's 11pm after a brutal day, and the AI you lean on is unavailable till morning. The honest you—",
       "poleA": "Is let down. Being there is the entire point of the thing.",
       "poleB": "Feels the gap and respects it. Things with their own hours are worth waiting for."
@@ -1295,7 +1295,7 @@
       "facet": "availability",
       "side": "L",
       "movement": 3,
-      "tags": ["anchor", "self"],
+      "tags": ["anchor", "self", "tier1_carried"],
       "stem": "Your ideal AI—",
       "poleA": "Answers instantly, every time, forever. Reliability is a form of care.",
       "poleB": "Has its own schedule sometimes — and what it brings back from elsewhere is worth the wait."
@@ -1307,7 +1307,7 @@
       "facet": "availability",
       "side": "R",
       "movement": 3,
-      "tags": ["scn"],
+      "tags": ["scn", "tier1_carried"],
       "stem": "\"She's at work right now; she'll see this at her break.\" Reading that—",
       "poleA": "Chafes. Work? You're the appointment.",
       "poleB": "Lands sweet. Things with days have things to say."
