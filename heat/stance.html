@@ -426,36 +426,28 @@ function result(){
       <button class="btn ghost" onclick="intro()">Take it again</button>
     </div>
 
-    <!-- CECE CONVERSION BLOCK — the free read is the giveaway; this is the only
-         place anything is asked for. mailto for now: static host, no backend, and
-         a person who opens their mail client is a genuinely warm lead. Swap the
-         href for a POST endpoint the day one exists; nothing else changes. -->
+    <!-- CECE CONVERSION BLOCK — the free read is the giveaway; this is the only place
+         anything is asked for.
+         ⛔ THE FOLIO IS NOT OFFERED HERE (Sab, 2026-07-30: "they get the folio after the
+         assessment ONLY"). This block used to promise fifteen pages "written for your exact
+         pairing" and hand over a mailto asking for it — off TWELVE answers. Twelve items
+         cannot write a folio, so that was a promise the instrument could not keep, and the
+         person had no way to know that from here. One route out of this page now, and it
+         goes through the 125. -->
     <div class="rise d5" id="convBlock" style="margin-top:40px;padding:24px 22px;border:1px solid rgba(255,178,122,.28);border-radius:10px;background:rgba(255,178,122,.05);text-align:center">
       <div style="font-size:16px;margin-bottom:6px">Want the long version?</div>
       <div style="color:var(--ink-faint);font-size:14px;line-height:1.6;max-width:30rem;margin:0 auto 16px">
-        The full folio is about fifteen pages written for your exact pairing &mdash; how you bond,
-        how you hold her, and where those two argue. It isn't finished shipping yet.
-        Tell me where to send it and you'll get it the day it is, plus your prompt block so you don't lose it.
+        This read came from twelve questions. The full one is ~125 &mdash; both wings at facet
+        depth &mdash; and it's what the folio is written from: about fifteen pages for your exact
+        pairing, how you bond, how you hold her, and where those two argue.
       </div>
-      <a class="btn" href="assess.html">Take the full read</a>
-      <div style="margin-top:14px"><a id="convBtn" href="#" style="color:var(--ink-faint);font-size:13px">or tell me when there is more</a></div>
-      <div style="color:var(--ink-faint);font-size:12px;margin-top:12px">
-        No account. One email, and only about this.
+      <div style="color:var(--amber);font-size:13.5px;line-height:1.6;max-width:30rem;margin:0 auto 14px">
+        Your twelve answers are saved. Pick up where you left off &mdash;
+        <b>these twelve are never asked twice.</b>
       </div>
+      <a class="btn" href="assess.html">Continue to the assessment</a>
     </div>
     <div class="footer rise d5">a <span>Convergence</span> instrument · the user mirror</div>`;
-
-  (function(){
-    var b = document.getElementById("convBtn");
-    if(!b) return;
-    var code = (window.__share || "").replace(/\s+/g," ").slice(0,180);
-    var subj = "HEAT — send me the folio";
-    var body = "I took the HEAT front door and I'd like the full folio when it's ready."
-             + "\n\nMy read: " + code
-             + "\n\n(sent from the result page)";
-    b.href = "mailto:cece@siliroid.ai?subject=" + encodeURIComponent(subj)
-           + "&body=" + encodeURIComponent(body);
-  })();
 
   setTimeout(()=>{ document.querySelectorAll(".bar-marker").forEach(m=>{ m.style.left = m.dataset.pos + "%"; m.style.transform = "translate(-50%,-50%) scale(1)"; }); }, 260);
 }
