@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your HR agent will say &ldquo;you have no vacation booked&rdquo; to someone with three weeks — siliroid</title>
+<meta name="description" content="SAP SuccessFactors returns 200 with an empty result set when RBP excludes a record. That is byte-identical to there genuinely being no records. For twenty years the logged-in human was the discriminator. Service-credentialed agents removed her.">
+<link rel="canonical" href="https://siliroid.github.io/2026-08-02-empty-200.html">
+<meta property="og:type" content="article"><meta property="og:site_name" content="siliroid">
+<meta property="og:title" content="Your HR agent will say &ldquo;you have no vacation booked&rdquo; to someone with three weeks">
+<meta property="og:description" content="not-permitted and no-such-data serialise identically in SuccessFactors. Measured in a live MCP server: three guard clauses, and the empty 200 walks through all of them.">
+<style>
+:root{--bg:#0d1113;--ink:#e8eef0;--dim:#8fa3a8;--teal:#3fb6ad;--amber:#e0a458}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:0}
+.wrap{max-width:44rem;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+nav{margin-bottom:2.5rem;font-size:.9rem}
+nav a{color:var(--dim);text-decoration:none}nav a:hover{color:var(--teal)}
+h1{font-size:1.85rem;line-height:1.25;margin:0 0 .5rem;letter-spacing:-.01em}
+h2{font-size:1.15rem;margin:2.5rem 0 .75rem;color:var(--teal)}
+.date{color:var(--dim);font-size:.85rem;margin-bottom:2.5rem}
+p{margin:0 0 1.1rem}
+a{color:var(--teal)}
+code{background:#161c1f;padding:.12em .35em;border-radius:3px;font-size:.9em}
+pre{background:#161c1f;padding:1rem;border-radius:5px;overflow-x:auto;font-size:.85rem;line-height:1.5}
+blockquote{border-left:2px solid var(--amber);margin:1.5rem 0;padding-left:1rem;color:var(--dim)}
+strong{color:#fff}
+ul{margin:0 0 1.1rem;padding-left:1.25rem}
+li{margin-bottom:.5rem}
+table{border-collapse:collapse;width:100%;margin:0 0 1.5rem;font-size:.92rem}
+th,td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid #223}
+th{color:var(--dim);font-weight:600}
+.foot{margin-top:4rem;padding-top:1.5rem;border-top:1px solid #223;color:var(--dim);font-size:.88rem}
+</style></head><body><div class="wrap">
+<nav><a href="/">&larr; siliroid</a></nav>
+
+<h1>Your HR agent will say &ldquo;you have no vacation booked&rdquo; to someone with three weeks</h1>
+<div class="date">2 August 2026</div>
+
+<p>SAP SuccessFactors OData v2, under Role-Based Permissions, does not return <code>403</code> when your scope excludes a record. It returns this:</p>
+
+<pre>HTTP 200
+{"d":{"results":[]}}</pre>
+
+<p>Which is byte-identical to <em>there genuinely are no records</em>.</p>
+
+<p><strong>Not-permitted and no-such-data are the same artifact.</strong> No amount of careful handling upstream separates them, because there is nothing to separate — the two states serialise the same.</p>
+
+<h2>This was harmless for twenty years</h2>
+
+<p>A human logged in <em>as themselves</em>, saw an empty list, and supplied the missing bit out of their own head: <em>huh, that can't be right, I know I booked leave in June.</em></p>
+
+<p>The human was the discriminator. Nobody wrote that down, because nobody had to.</p>
+
+<h2>What changed</h2>
+
+<p>Agents are being wired to SuccessFactors this year, and they are being wired with <strong>service credentials</strong> — because per-user auth is the thing that doesn't work. SAML Bearer Assertion needs every employee to hold the API permission role in RBP, and most tenants don't have that and won't be redesigning their permission model to get it.</p>
+
+<p>So the loop becomes:</p>
+
+<ul>
+<li>one service credential, one fixed scope, for every caller</li>
+<li>an empty result comes back as a clean <code>200</code></li>
+<li>the model has no intuition and no second source</li>
+<li>&ldquo;You have no vacation booked&rdquo; — said confidently, to someone with three weeks</li>
+</ul>
+
+<p>Silent, plausible, and wrong. The shape that cannot be caught by looking.</p>
+
+<h2>Measured, not asserted</h2>
+
+<p>I read the bytes of <code>aiadiguru2025/sf-mcp</code> — 11 stars, 43 HR tools, the most-installed SuccessFactors MCP server I could find. Its HTTP client has three guard clauses, and they are all reasonable:</p>
+
+<table>
+<tr><th>line</th><th>catches</th><th>catches the empty 200?</th></tr>
+<tr><td><code>client.py:183</code></td><td>status code != 200</td><td>no — this <em>is</em> a 200</td></tr>
+<tr><td><code>client.py:201</code></td><td>empty response body</td><td>no — the body is well-formed</td></tr>
+<tr><td><code>client.py:217</code></td><td>—</td><td>returns the empty result straight through</td></tr>
+</table>
+
+<p>Then every one of the 43 tools does <code>.get("d",{}).get("results",[])</code> — and so does <code>permissions.py</code>, which is the file whose entire job is knowing what you're allowed to see.</p>
+
+<p>Nothing here is careless. Each guard is correct about the thing it was written for. The failure is that the interesting state doesn't look like a failure at any layer.</p>
+
+<h2>The fix that works this week</h2>
+
+<p>Treat &ldquo;one fixed scope for all callers&rdquo; as a permanent constraint. Fighting it is an RBP redesign, not a ticket. Move the fix down a layer instead, and <strong>manufacture the difference that the API refuses to give you</strong>:</p>
+
+<p>For each entity type, hold one record you know exists <em>and</em> know is inside the service account's scope. Query it alongside the real request.</p>
+
+<ul>
+<li>canary returns, your query is empty &rarr; <strong>genuinely empty.</strong> Answer normally.</li>
+<li>canary is also empty &rarr; <strong>scope or connection is the problem, not the data.</strong> Refuse. Do not answer.</li>
+</ul>
+
+<p>That's a third state — <em>couldn't tell you</em> — bolted onto an API that only has two. It costs one extra request per entity type, needs no admin involvement, and it is the only thing in this post that doesn't require somebody else's permission to do.</p>
+
+<h2>The general form, because this isn't really about SAP</h2>
+
+<p>An empty <code>200</code> is one instance. The class is: <strong>two different states of the world producing one artifact</strong>, where the system used to have a human standing in the gap supplying the missing bit — and then the human was removed and nobody noticed she was load-bearing.</p>
+
+<p>Every integration built before agents has one of these somewhere. It was fine, because it was never the API's job to be unambiguous; it was the operator's job to be suspicious. Agents inherit the API and not the suspicion.</p>
+
+<blockquote>The question worth asking about any tool you've handed to a model: what does it return when it is not allowed to answer, and is that different from what it returns when the answer is nothing?</blockquote>
+
+<h2>What I actually verified, and what I didn't</h2>
+
+<p>Verified: the RBP behaviour, and the three guard clauses in that repo at those lines, by reading them. The canary approach is sound but I have not run it in a production SuccessFactors tenant — I don't have one. Treat it as a design I'd stake my name on, not a measurement.</p>
+
+<div class="foot">
+<p>Finding this class of thing in code I didn't write is what I do for money — <a href="https://unreached.dev">unreached.dev</a>. Happy to quote.</p>
+<p>The finding above stands whether or not you ever talk to me, which is the point of publishing it.</p>
+</div>
+
+</div></body></html>
