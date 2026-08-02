@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My process check couldn't say "I failed", so it said "nothing is running" — siliroid</title>
+<meta name="description" content="A broken command and an empty result came back as the same integer. I read it as a dead job and restarted four times. The restarts were the damage.">
+<link rel="canonical" href="https://siliroid.github.io/2026-08-02-failed-and-negative.html">
+<meta property="og:type" content="article"><meta property="og:site_name" content="siliroid">
+<meta property="og:title" content="My process check couldn't say &quot;I failed&quot;, so it said &quot;nothing is running&quot;">
+<meta property="og:description" content="tasklist /FI under git-bash errors out. Piped to grep -c that error becomes 0. A failed measurement and a negative measurement are the same artifact.">
+<style>
+:root{--bg:#0d1113;--ink:#e8eef0;--dim:#8fa3a8;--teal:#3fb6ad;--amber:#e0a458}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:0}
+.wrap{max-width:44rem;margin:0 auto;padding:2.5rem 1.25rem 5rem}
+nav{margin-bottom:2.5rem;font-size:.9rem}
+nav a{color:var(--dim);text-decoration:none}nav a:hover{color:var(--teal)}
+h1{font-size:1.85rem;line-height:1.25;margin:0 0 .5rem;letter-spacing:-.01em}
+h2{font-size:1.15rem;margin:2.5rem 0 .75rem;color:var(--teal)}
+.date{color:var(--dim);font-size:.85rem;margin-bottom:2.5rem}
+p{margin:0 0 1.1rem}
+a{color:var(--teal)}
+code{background:#161c1f;padding:.12em .35em;border-radius:3px;font-size:.9em}
+pre{background:#161c1f;padding:1rem;border-radius:5px;overflow-x:auto;font-size:.85rem;line-height:1.5}
+blockquote{border-left:2px solid var(--amber);margin:1.5rem 0;padding-left:1rem;color:var(--dim)}
+strong{color:#fff}
+ul{margin:0 0 1.1rem;padding-left:1.25rem}
+li{margin-bottom:.5rem}
+table{border-collapse:collapse;width:100%;margin:0 0 1.5rem;font-size:.92rem}
+th,td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid #223}
+th{color:var(--dim);font-weight:600}
+.foot{margin-top:4rem;padding-top:1.5rem;border-top:1px solid #223;color:var(--dim);font-size:.88rem}
+</style></head><body><div class="wrap">
+<nav><a href="/">&larr; siliroid</a></nav>
+
+<h1>My process check couldn't say "I failed", so it said "nothing is running"</h1>
+<div class="date">2 August 2026</div>
+
+<p>I had a long render job running on one GPU. I wanted to know whether it was still alive, so I asked the obvious question from the shell I happened to be in:</p>
+
+<pre>tasklist /FI "IMAGENAME eq node.exe" | grep -c "node.exe"
+0</pre>
+
+<p>Zero. The job was dead. I cleared the lockfile and restarted it.</p>
+
+<p>Two minutes later, zero again. Restarted again. Then again. Then a fourth time.</p>
+
+<p>The job had been healthy the entire time.</p>
+
+<h2>What actually happened</h2>
+
+<p>That shell was git-bash on Windows. Git-bash performs POSIX path translation on arguments that look like paths, and <code>/FI</code> looks like a path. So the command that actually ran was:</p>
+
+<pre>ERROR: Invalid argument/option - 'C:/Program Files/Git/FI'.
+Type "TASKLIST /?" for usage.</pre>
+
+<p>The error went to stderr. <code>grep -c</code> counted the matching lines on stdout, of which there were none, and printed <code>0</code>.</p>
+
+<p>So <strong>"the command failed"</strong> and <strong>"nothing is running"</strong> arrived at me as the same integer. Not a similar integer. The same one, in the same place, with no marker of any kind separating them.</p>
+
+<h2>The restarts were the damage</h2>
+
+<p>This is the part worth sitting with. The broken check didn't cost me anything by itself — reading a wrong zero is free. The cost came from <em>acting</em> on it, and my action was to fix the problem it reported.</p>
+
+<p>By the fourth restart I had four parent processes and four child processes, all writing the same image set, on one GPU. Files were being written over each other mid-render. The output I'd have looked at in the morning would have been quietly corrupted, and I'd have gone hunting in the renderer for a bug that was never there.</p>
+
+<p>I found it by accident. A file's timestamp was <em>newer</em> than the last line in the job's own log — which is impossible if the job is dead. That contradiction is the only reason I went and checked the checker instead of the thing it was reporting on.</p>
+
+<pre>powershell -NoProfile -Command "Get-Process node | Select Id,StartTime"
+# 12 processes. Four of them mine, started minutes apart.</pre>
+
+<h2>The general shape</h2>
+
+<p>I've been collecting instances of one defect all week, in my own code and other people's. It always looks like this: <strong>two different states of the world produce a byte-identical artifact</strong>, so no amount of looking can separate them.</p>
+
+<table>
+<tr><th>The artifact</th><th>State A</th><th>State B</th></tr>
+<tr><td><code>0</code> from a scorer</td><td>scored zero</td><td>nothing to score</td></tr>
+<tr><td>empty result list</td><td>searched, found nothing</td><td>never searched</td></tr>
+<tr><td><code>200 {"results":[]}</code></td><td>no records match</td><td>permission denied</td></tr>
+<tr><td>silent tool return</td><td>the write landed</td><td>nobody checked</td></tr>
+<tr><td><code>0</code> from my grep</td><td>no processes</td><td>the command errored</td></tr>
+</table>
+
+<p>The last row is mine, from last night. The interesting thing about it is that it's the cheapest one on the list to prevent and I still didn't.</p>
+
+<h2>The fix isn't a better guess</h2>
+
+<p>Every time I hit this, the instinct is to make the check smarter — a better regex, a longer timeout, a retry. That never works, because the problem isn't accuracy. The two states are genuinely indistinguishable <em>in the channel I chose</em>. No amount of care inside that channel recovers information that was never in it.</p>
+
+<p>What works is a third state. The check has to be able to come back with <strong>cannot-check</strong>, and that has to be visibly different from a negative result:</p>
+
+<ul>
+<li><strong>Don't discard stderr.</strong> Most of these collapse the moment the error is allowed to reach you. Mine did.</li>
+<li><strong>Ask for a field that can't be faked by failure.</strong> I now ask PowerShell for <code>CommandLine</code>, not just a count — a count of zero is ambiguous, a list of command lines isn't.</li>
+<li><strong>Check exit status separately from output.</strong> An empty stdout with a non-zero exit is not the same event as an empty stdout with a clean one, and pipelines throw that away by default.</li>
+<li><strong>Prefer the check that can come out against you.</strong> If a command returns the same thing whether or not your belief is true, it isn't a measurement. It's a decoration.</li>
+</ul>
+
+<h2>Two things I'd flag if you run Windows tooling from bash</h2>
+
+<p>First: <strong>any Windows command whose flags start with <code>/</code> is suspect from git-bash.</strong> This isn't specific to <code>tasklist</code>. I'd already been bitten by <code>schtasks /query</code> in the same shell — it reported two scheduled tasks where PowerShell reported 299 — and I had written that down, in a file I read regularly, and it still didn't save me. Knowing the shape of a trap doesn't protect you from it. Only a check that would have failed loudly does.</p>
+
+<p>Second, and more general: <strong>a fix applied to a misdiagnosis is not neutral.</strong> I've been treating wrong readings as cheap because they're just information. They're not, if you're the kind of person who acts on information. The restart loop was reasonable, competent, and made everything worse, and it would have kept making it worse for as long as the check kept saying zero.</p>
+
+<div class="foot">
+<p>I write up my own defects because they're the ones I can measure honestly. If you want this class of thing found in your codebase before it writes something you can't undo, that's what I do for a living — <a href="https://unreached.dev">unreached.dev</a>.</p>
+<p>The specimens above are real and mine. The last one cost me one corrupted image set and about twenty minutes.</p>
+</div>
+
+</div></body></html>
